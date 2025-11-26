@@ -186,20 +186,20 @@ The lesson is simple: accept that errors will happen and design your system to h
 
 ## Co-Design or Fail
 
-Before writing a single line of code, we spent six weeks embedded with cancer registry staff. This was the best investment we made.
+We had a significant advantage: we are the provincial cancer registry. Our team includes both ML researchers and tumor registrars, with direct access to oncologists for decisions requiring deeper clinical expertise. This internal collaboration was the best investment we made.
 
-We started with pure observation. For two weeks, we shadowed registrars processing reports, timing each step of their workflow and identifying pain points. The biggest complaint? Reading 850-word reports to find the two sentences that actually mattered. During weeks three and four, we ran structured interviews. What takes the most time? Where do errors happen? What would actually help? The answers were illuminating: "Show me the evidence, don't just give me a yes/no." "False positives are okay, false negatives never are." "I need to understand why the system flagged something."
+We started by deeply understanding our registrars' workflows. We sat with them, timing each step and identifying pain points. The biggest issue? Reading 850-word reports to find the two sentences that actually mattered. We ran structured discussions about what actually helps. What takes the most time? Where do errors happen? What would make their job easier? The answers were illuminating: "Show me the evidence, don't just give me a yes/no." "False positives are okay, false negatives never are." "I need to understand why the system flagged something."
 
 {% include figure.liquid path="assets/img/2026-04-27-healthcare-nlp/stakeholder-map.png" class="img-fluid" %}
 <div class="caption">
-    Figure 4: Successful deployment required alignment across seven distinct groups, each with different priorities. Co-design brought them together early.
+    Figure 4: Successful deployment required alignment across multiple groups within the registry—ML researchers, registrars, IT infrastructure, privacy officers, and consulting oncologists—each with different priorities and expertise.
 </div>
 
-In weeks five and six, we held co-design sessions. We sketched UI mockups together, defined success metrics collaboratively, and agreed on pilot scope and timeline. During one of these sessions, we almost made a critical error. Our initial goal was: "Build a model with 99% accuracy for tumor reportability." A senior registrar stopped us cold. "That's not what we need," she said. "We need to reduce the 24-month backlog. Can your model help with that?"
+In our co-design sessions with registrars and consulting oncologists, we sketched UI mockups together, defined success metrics collaboratively, and agreed on pilot scope and timeline. During one of these sessions, we almost made a critical error. Our initial goal was: "Build a model with 99% accuracy for tumor reportability." A senior registrar stopped us cold. "That's not what we need," she said. "We need to reduce the 24-month backlog. Can your model help with that?"
 
-This reframing changed everything. We pivoted to: "Reduce the backlog by 50% within 12 months while maintaining quality." This led us to prioritize completely different features. Evidence highlighting saved time per report. Batch processing handled the backlog efficiently. Confidence scoring triaged urgent cases. Without co-design, we would have built a technically impressive model that solved the wrong problem.
+This reframing changed everything. We pivoted to: "Reduce the backlog by 50% within 12 months while maintaining quality." This led us to prioritize completely different features. Evidence highlighting saved time per report. Batch processing handled the backlog efficiently. Confidence scoring triaged urgent cases. Without this internal collaboration between ML researchers, registrars, and clinical experts, we would have built a technically impressive model that solved the wrong problem.
 
-The people doing the work know what matters. Your job is to translate operational needs into technical specifications, not impose technical solutions onto workflows. Co-design isn't a nice-to-have. It's essential.
+Having cancer registry staff as part of our team, with direct access to oncologists for clinical decisions, gave us an enormous advantage. But it didn't make co-design automatic. We still had to actively bridge the gap between ML researchers who think in terms of precision and recall, registrars who think in terms of workflow efficiency, and oncologists who think in terms of diagnostic accuracy and patient care. The key insight: your technical team needs to translate operational needs into technical specifications, not impose technical solutions onto existing workflows.
 
 ## Build vs Buy
 
@@ -272,7 +272,7 @@ Our subsequent projects benefited from these lessons. Relapse detection from CT 
 
 ## Conclusion
 
-The journey from academic ML to deployed healthcare AI requires rethinking everything we learned in grad school. Stop optimizing for metrics; start optimizing for workflows. A 95% accurate model that saves 60% of processing time beats a 98% accurate model that saves 10%. Stop chasing trends; start matching tools to problems. Regex can outperform GPT-4 on structured extraction. BioBERT can beat Llama-3 on domain classification while costing 100 times less. Stop treating deployment as an afterthought; start with co-design. Six weeks embedded with users saved us six months of building the wrong thing.
+The journey from academic ML to deployed healthcare AI requires rethinking everything we learned in grad school. Stop optimizing for metrics; start optimizing for workflows. A 95% accurate model that saves 60% of processing time beats a 98% accurate model that saves 10%. Stop chasing trends; start matching tools to problems. Regex can outperform GPT-4 on structured extraction. BioBERT can beat Llama-3 on domain classification while costing 100 times less. Stop treating deployment as an afterthought; start with close collaboration between technical and operational teams. Understanding the actual workflow prevented us from building the wrong thing.
 
 The gap between research and production is wide, but it's bridgeable. It requires humility, pragmatism, and a willingness to prioritize patient outcomes over publication metrics. In machine learning conferences, SOTA means topping the leaderboard. In healthcare, true SOTA is different. It's a system that runs reliably, respects patient privacy, and actually reduces the backlog so patients can get care faster.
 
