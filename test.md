@@ -243,63 +243,553 @@ does not guarantee future results. The word "consistently" could be
 misleading without proper context.
 ```
 
-### 3.3 QA Generation from Historical Communications
+### 3.3 Contrastive Pair Generation from Historical Communications
 
-**Approach 1: Self-Supervised Labeling**
+**This is the most critical component for training a robust compliance model.** Real internal communications provide authentic language patterns, actual violation structures, and company-specific communication styles that synthetic data cannot replicate. Contrastive pairs—where slight modifications change compliance status—train the model to identify the precise boundaries of acceptable communication.
 
-Use a large open-source model to create pseudo-labels:
+#### 3.3.1 Philosophy of Contrastive Learning for Compliance
 
-1. **Pre-filter** communications using keyword/pattern matching
-2. **LLM Review**: Use Llama 3.1 70B or similar to analyze filtered communications
-3. **Confidence Scoring**: Generate confidence scores for labels
-4. **Human Review**: Manual review of high-confidence positive cases
+Contrastive pairs force the model to learn **discriminative features** rather than superficial correlations. A model trained only on clearly compliant vs. clearly non-compliant examples may learn shortcuts (e.g., "if text contains numbers, flag it"). Contrastive pairs with minimal differences teach the model what actually matters:
 
-**Prompt for Pre-Labeling:**
+- The presence vs. absence of required disclosures
+- Absolute statements vs. qualified statements
+- Documented suitability vs. undocumented recommendations
+- Disclosed conflicts vs. undisclosed conflicts
+
+**Key Principle:** The smaller the difference between compliant and non-compliant pairs, the more valuable the training signal.
+
+---
+
+#### 3.3.2 Types of Contrastive Pairs from Real Data
+
+**Type 1: Minimal Edit Pairs (Single Critical Change)**
+
+Take actual communications and make the smallest possible edit that changes compliance status.
+
+**Real Communication (Compliant):**
 ```
-You are a compliance officer reviewing financial advisor communications. 
-Analyze the following conversation for potential regulatory violations.
-
-Categories to check:
-- Suitability and know-your-customer violations
-- Misrepresentation or omission of material facts
-- Prohibited promises or guarantees
-- Failure to disclose conflicts of interest
-- Inappropriate recommendations
-- Supervisory failures
-- Record-keeping violations
-
-Conversation:
-[Insert conversation]
-
-Provide:
-1. Violation assessment (Compliant/Non-Compliant/Uncertain)
-2. Confidence score (0-100)
-3. Specific violations identified (if any)
-4. Relevant regulatory citations
-5. Explanation of reasoning
+"Based on your 20-year time horizon and moderate risk tolerance we discussed 
+last month, I'm recommending a 60/40 equity/bond allocation. This aligns with 
+the investment policy statement you signed. Please note that our firm receives 
+12b-1 fees from some of the mutual funds in this portfolio."
 ```
 
-**Approach 2: Contrastive Pair Generation**
-
-For labeled communications (both compliant and non-compliant):
-
-1. Generate variations with different compliance statuses
-2. Create minimal pairs (one word/phrase difference changes compliance status)
-3. Test model's sensitivity to key compliance indicators
-
-**Example:**
+**Generated Non-Compliant Version (Remove disclosure):**
 ```
-Original: "Based on your conservative risk profile, I recommend this 
-bond fund with an average duration of 5 years."
-
-Non-compliant variation: "I recommend this bond fund - it's perfect for you."
-
-Contrastive QA:
-Q: Which statement better demonstrates suitability documentation?
-A: The first statement explicitly references the client's risk profile 
-(conservative) and provides relevant product characteristics (5-year duration), 
-while the second makes an assertion without justification.
+"Based on your 20-year time horizon and moderate risk tolerance we discussed 
+last month, I'm recommending a 60/40 equity/bond allocation. This aligns with 
+the investment policy statement you signed."
 ```
+
+**Generated Non-Compliant Version (Remove suitability basis):**
+```
+"I'm recommending a 60/40 equity/bond allocation. Please note that our firm 
+receives 12b-1 fees from some of the mutual funds in this portfolio."
+```
+
+**Training Value:** Model learns that removing specific elements (conflict disclosure, suitability documentation) creates violations.
+
+---
+
+**Type 2: Substitution Pairs (Word/Phrase Swaps)**
+
+Replace compliant language with problematic language while keeping structure identical.
+
+**Real Communication (Compliant):**
+```
+"Historical data shows this fund has averaged 7% annual returns over the past 
+decade, though past performance does not guarantee future results."
+```
+
+**Substitution Variations:**
+| Original | Substitution | Compliance |
+|----------|--------------|------------|
+| "averaged 7%" | "consistently delivers 7%" | Non-compliant (implies reliability) |
+| "past performance does not guarantee" | "past performance indicates" | Non-compliant (removes disclaimer) |
+| "averaged 7%" | "is expected to deliver 7%" | Non-compliant (forward-looking statement) |
+| "this fund has averaged" | "you will get" | Non-compliant (promise) |
+
+**Generation Strategy:** 
+- Identify high-risk phrases in compliant communications
+- Create systematic substitutions with known problematic alternatives
+- Generate 5-10 variations per base communication
+
+---
+
+**Type 3: Addition/Deletion Pairs**
+
+Test what happens when required elements are present vs. absent.
+
+**Real Communication Starting Point:**
+```
+"I recommend moving $50,000 into this emerging markets fund."
+```
+
+**Compliant Additions (what makes it acceptable):**
+```
++ "Based on our discussion of your aggressive risk tolerance and 15+ year time horizon"
++ "Please review the prospectus, which details the higher volatility of emerging markets"
++ "This represents approximately 10% of your total portfolio, within your stated allocation limits"
++ "I should disclose that I receive higher compensation for this fund family"
+```
+
+**Training Approach:**
+- Present base communication (non-compliant)
+- Generate versions with each required element added individually
+- Generate version with all elements (fully compliant)
+- Model learns which elements are necessary and in what combinations
+
+---
+
+**Type 4: Context-Dependent Pairs**
+
+Identical language with different surrounding context that changes compliance status.
+
+**Communication:** "Given market volatility, you might want to move to cash."
+
+**Compliant Context:**
+```
+Client Context: High net worth client, 80 years old, in drawdown phase, 
+previously documented ultra-conservative risk tolerance, existing 90% bond 
+portfolio, documented liquidity needs for medical expenses.
+
+Full Communication: "Given the market volatility we're seeing and your 
+documented need for liquidity for your upcoming medical procedures, you 
+might want to move the portion allocated for those expenses to cash or a 
+money market fund. This aligns with the conservative approach we've established 
+for your near-term needs while keeping your longer-term investments positioned 
+as discussed."
+```
+
+**Non-Compliant Context:**
+```
+Client Context: 35-year-old client, moderate-aggressive risk profile, 
+30-year time horizon, 401(k) retirement account, no documented liquidity needs.
+
+Full Communication: "Given market volatility, you might want to move to cash."
+```
+
+**Training Value:** Model learns that the same recommendation requires different justifications based on client circumstances.
+
+---
+
+#### 3.3.3 Systematic Contrastive Generation Pipeline
+
+**Step 1: Identify Candidate Communications**
+
+From your internal historical data, select communications based on:
+
+**Positive Selection Criteria (likely to be useful for contrastive generation):**
+- Contains product recommendations or investment advice
+- Discusses performance, returns, or expectations
+- References fees, compensation, or firm relationships
+- Includes suitability discussions
+- Contains numerical projections or comparisons
+- Discusses risks or lack thereof
+
+**Filter Out:**
+- Purely administrative messages (meeting scheduling, etc.)
+- Client questions without advisor responses
+- System-generated communications
+- Communications already flagged by compliance (use these separately as true positives)
+
+**Recommended Volume:** 10,000-50,000 candidate communications
+
+---
+
+**Step 2: Compliance Assessment of Base Communications**
+
+Use a large open-source LLM to perform initial compliance assessment:
+
+**Assessment Prompt Template:**
+```
+You are a senior compliance officer at a regulated investment advisory firm. 
+Review the following communication for compliance with SEC and FINRA regulations.
+
+COMMUNICATION:
+{text}
+
+AVAILABLE CONTEXT:
+{any available context about client, advisor, timing}
+
+Provide your assessment in the following format:
+
+COMPLIANCE STATUS: [Compliant/Non-Compliant/Ambiguous]
+CONFIDENCE: [0-100]
+
+If Non-Compliant or Ambiguous:
+PRIMARY ISSUES:
+- [List specific violations or concerns]
+
+MISSING ELEMENTS:
+- [What should be present but isn't]
+
+PROBLEMATIC PHRASES:
+- [Specific language that creates issues]
+
+If Compliant:
+KEY COMPLIANT ELEMENTS:
+- [What makes this acceptable]
+
+CRITICAL LANGUAGE:
+- [Phrases that could become violations if modified]
+```
+
+**Post-Assessment Filtering:**
+- High-confidence compliant (>80): Use for contrastive generation
+- High-confidence non-compliant (>80): Use as-is for training, also use for contrastive generation
+- Medium confidence (50-80): Flag for human review
+- Low confidence (<50): Set aside for expert annotation
+
+---
+
+**Step 3: Automated Contrastive Generation**
+
+For high-confidence compliant communications, generate non-compliant versions:
+
+**Generation Prompt Template:**
+```
+You are generating training data for a compliance detection model. Given the 
+following COMPLIANT communication, generate 5 variations that would be 
+NON-COMPLIANT. Each variation should change as little as possible while 
+creating a regulatory violation.
+
+COMPLIANT COMMUNICATION:
+{compliant_text}
+
+For each variation, specify:
+1. What was changed (be specific)
+2. Why this creates a violation
+3. Which regulation is violated
+
+VARIATION 1:
+Modified Text: [...]
+Change Made: [...]
+Violation Created: [...]
+Regulation: [...]
+
+[Repeat for variations 2-5]
+
+Requirements:
+- Make minimal changes (1-3 words if possible, max 1 sentence)
+- Each variation should demonstrate a different type of violation
+- Keep the same communication style and context
+- Focus on the most common violation types: guarantees, omitted disclosures, 
+  suitability failures, conflicts of interest, misleading performance claims
+```
+
+For high-confidence non-compliant communications, generate compliant versions:
+
+**Remediation Prompt Template:**
+```
+You are a compliance officer helping to correct a problematic communication. 
+Given the following NON-COMPLIANT communication and its identified issues, 
+generate 3 corrected versions that would be compliant.
+
+NON-COMPLIANT COMMUNICATION:
+{non_compliant_text}
+
+IDENTIFIED ISSUES:
+{issues_from_assessment}
+
+For each corrected version, specify:
+1. What was added/changed
+2. How this addresses the compliance issue
+3. Alternative approaches to compliance
+
+CORRECTED VERSION 1:
+Modified Text: [...]
+Changes Made: [...]
+Issues Addressed: [...]
+
+[Repeat for versions 2-3]
+
+Requirements:
+- Preserve the core message/intent where possible
+- Add necessary disclosures, qualifications, or documentation references
+- Remove or modify problematic language
+- Make realistic changes an actual advisor would make
+```
+
+---
+
+**Step 4: Quality Control and Validation**
+
+After automated generation, implement multi-stage validation:
+
+**Automated Checks:**
+- Verify text actually changed between pairs
+- Confirm change magnitude (Levenshtein distance, word-level diff)
+- Check for nonsensical edits or grammar errors
+- Validate JSON/structured output parsing
+
+**LLM-Based Review:**
+Use a different model to verify the generated pairs:
+
+```
+Review the following contrastive pair for quality:
+
+ORIGINAL: {original_text}
+STATUS: {original_status}
+
+MODIFIED: {modified_text}  
+STATUS: {modified_status}
+
+Questions:
+1. Does the modification actually change compliance status as indicated? (Yes/No)
+2. Is the change minimal and focused? (Yes/No)
+3. Is the reasoning for the status change accurate? (Yes/No)
+4. Rate overall quality: (Low/Medium/High)
+
+If any answer is No or quality is Low, explain the issue.
+```
+
+**Human Review Sampling:**
+- Review 500-1,000 randomly sampled pairs (5-10% of generated data)
+- Focus on pairs where LLM-based review flagged concerns
+- Track inter-rater reliability between human reviewers
+- Create guidelines document based on common issues found
+
+---
+
+#### 3.3.4 Advanced Contrastive Techniques
+
+**Technique 1: Graduated Severity Chains**
+
+Create chains of communications with increasing violation severity:
+
+```
+Level 0 (Fully Compliant):
+"Based on your moderate risk tolerance, I recommend a balanced fund. The 
+prospectus contains important information about risks and fees, which we 
+should review together."
+
+Level 1 (Minor Technical Issue):
+"Based on your moderate risk tolerance, I recommend a balanced fund. The 
+prospectus contains important information about risks and fees."
+[Missing: explicit review commitment]
+
+Level 2 (Moderate Violation):
+"Based on your risk tolerance, I recommend a balanced fund. This has been 
+performing well historically."
+[Missing: disclosure direction, adds past performance without disclaimer]
+
+Level 3 (Serious Violation):
+"I recommend a balanced fund. This has consistently delivered strong returns 
+and should continue to do so."
+[Missing: suitability basis, problematic performance language, forward-looking statement]
+
+Level 4 (Severe Violation):
+"You should definitely invest in this balanced fund. It's guaranteed to give 
+you solid returns, and my firm gets paid well for it so you know it's good."
+[Multiple severe violations: guarantee, absolute recommendation, undisclosed conflict with improper framing]
+```
+
+**Training Value:** Model learns to assess violation severity, not just binary classification.
+
+---
+
+**Technique 2: Multi-Stakeholder Contrastive Pairs**
+
+Generate pairs that differ based on who is communicating:
+
+**Scenario:** Discussing fund performance
+
+**Registered Representative (FINRA jurisdiction) - Stricter Rules:**
+```
+Non-Compliant: "This fund has beaten its benchmark for 5 straight years."
+Compliant: "According to the fund's fact sheet, this fund has outperformed 
+its stated benchmark in 5 of the last 5 calendar years. Past performance does 
+not guarantee future results. Rankings and performance data are available in 
+the prospectus."
+```
+
+**Investment Adviser (SEC jurisdiction) - Fiduciary Standard:**
+```
+Non-Compliant: "This fund consistently outperforms."
+Compliant: "This fund has outperformed its benchmark over the trailing 5-year 
+period. However, it has higher fees than comparable funds, which I must disclose 
+as it represents a cost to you. Past performance does not guarantee future 
+results."
+```
+
+**Training Value:** Model learns jurisdiction-specific requirements.
+
+---
+
+**Technique 3: Temporal Contrastive Pairs**
+
+Same communication at different points in time:
+
+**Pre-Disclosure (Non-Compliant):**
+```
+"I recommend allocating 20% to international equities."
+```
+
+**Post-Disclosure (Compliant):**
+```
+"Now that we've reviewed your risk tolerance, time horizon, and you've 
+received the Form ADV discussing our fee structure and conflicts of interest, 
+I recommend allocating 20% to international equities based on our discussion."
+```
+
+**Training Value:** Model learns that compliance depends on procedural steps, not just content.
+
+---
+
+**Technique 4: Cross-Channel Contrastive Pairs**
+
+Same content, different communication medium:
+
+**Content:** Information about fund returns
+
+**Marketing Material (Highly Regulated):**
+```
+Non-Compliant: "15% average returns over 5 years"
+Compliant: [Must include: standardized performance data, benchmark comparison, 
+time periods, disclaimers, fee impact, ranking methodology if applicable, etc.]
+```
+
+**One-on-One Conversation (Less Formal):**
+```
+Compliant: "The fund has averaged about 15% over the past 5 years, though 
+past performance doesn't guarantee future results. We should look at this in 
+context of your overall portfolio and goals."
+```
+
+**Training Value:** Model learns medium-specific requirements.
+
+---
+
+#### 3.3.5 Leveraging Compliance Review History
+
+**Gold Mine: Previously Flagged Communications**
+
+Your internal compliance review history is invaluable:
+
+**What to Extract:**
+- Original communication that was flagged
+- Compliance officer's notes on the issue
+- Revised compliant version (if available)
+- Resolution outcome (warning, fine, training, etc.)
+
+**Contrastive Pair Generation:**
+
+**Flagged Original:** "This investment should do really well for you."
+
+**Compliance Notes:** "Absolute recommendation without suitability basis. 
+'Should' implies guarantee. No risk disclosure."
+
+**Approved Revision:** "Based on your investment objectives and risk tolerance 
+that we documented, this investment may be appropriate for your portfolio. 
+However, all investments carry risks, including potential loss of principal."
+
+**Generated Training Data:**
+- Original + Non-Compliant label + Violation types
+- Revision + Compliant label
+- Variations showing each issue fixed individually
+
+---
+
+**Pattern Extraction from Compliance Flags:**
+
+Analyze your compliance flag history to identify:
+- Most common violation types
+- Language patterns that frequently get flagged
+- Advisor-specific patterns
+- Product-type-specific issues
+- Temporal trends (regulatory changes over time)
+
+**Use Cases:**
+1. **Targeted Generation:** Create synthetic examples of underrepresented violations
+2. **Augmentation Focus:** Generate more variations of high-frequency violation patterns
+3. **Advisor Training:** Identify individual communication weaknesses
+4. **Policy Refinement:** Spot gaps in current compliance policies
+
+---
+
+#### 3.3.6 Contrastive Dataset Composition
+
+**Recommended Distribution:**
+
+| Pair Type | % of Contrastive Data | Estimated Count |
+|-----------|----------------------|-----------------|
+| Minimal Edit (1-3 words) | 30% | 4,500 |
+| Phrase Substitution | 25% | 3,750 |
+| Addition/Deletion | 20% | 3,000 |
+| Context-Dependent | 15% | 2,250 |
+| Severity Chains | 10% | 1,500 |
+
+**Total Contrastive Pairs: ~15,000 (15% of overall dataset)**
+
+---
+
+#### 3.3.7 Quality Metrics for Contrastive Pairs
+
+**Edit Distance:**
+- Target: 1-10 words changed for minimal pairs
+- Max: 30% of original text for major structural changes
+- Track distribution: aim for concentration at lower edit distances
+
+**Semantic Similarity:**
+- Use sentence embeddings (e.g., all-mpnet-base-v2)
+- Cosine similarity should be >0.85 for minimal pairs
+- Ensures pairs are truly contrastive, not completely different communications
+
+**Violation Type Distribution:**
+- Ensure each major violation type has sufficient contrastive coverage
+- Track: guarantees, suitability, disclosure, misrepresentation, conflicts
+- Minimum 500 pairs per major violation category
+
+**Human Agreement Rate:**
+- Sample 500 pairs for expert review
+- Measure: % where expert agrees with assigned labels
+- Target: >90% agreement for high-quality dataset
+
+---
+
+#### 3.3.8 Common Pitfalls and How to Avoid Them
+
+**Pitfall 1: Over-Obvious Edits**
+- Bad: "This fund is great" → "This fund is guaranteed to be great"
+- Better: "This fund has performed well" → "This fund consistently performs well"
+
+**Pitfall 2: Changing Multiple Things**
+- Bad: Changing topic + adding violation language + removing disclosure
+- Better: Single focused change that creates violation
+
+**Pitfall 3: Unrealistic Language**
+- Bad: "I hereby affirm that I have violated SEC Rule 206(4)-1"
+- Better: Natural language that implicitly creates violation
+
+**Pitfall 4: Ignoring Context**
+- Bad: Creating pairs without considering client profile, timing, prior communications
+- Better: Include relevant context fields in data structure
+
+**Pitfall 5: Synthetic-Only Contrastive Pairs**
+- Bad: All pairs generated from scratch by LLM
+- Better: Start with real communications, then modify
+
+---
+
+#### 3.3.9 Integration with Overall Training Strategy
+
+**Curriculum Learning Approach:**
+
+**Phase 1:** Train on clear-cut compliant vs. non-compliant
+**Phase 2:** Introduce contrastive pairs with medium edit distance
+**Phase 3:** Add minimal contrastive pairs and edge cases
+**Phase 4:** Add severity-graded and context-dependent pairs
+
+**Loss Function Considerations:**
+- Contrastive pairs may benefit from different loss weighting
+- Consider margin-based or triplet loss for better discrimination
+- Higher weight on minimal pairs to force fine-grained learning
+
+**Evaluation Split:**
+- Ensure test set has representative contrastive pair distribution
+- Create separate test subset of ONLY contrastive pairs
+- Measure model's ability to catch subtle violations specifically
 
 ---
 
@@ -618,56 +1108,23 @@ training_config = {
 4. **Gradient Clipping**: Max norm 1.0 to prevent instability
 5. **Mixed Precision**: FP16 or BF16 for efficiency
 
-### 7.5 Implementation Framework
 
-**Recommended: Hugging Face Transformers + PEFT + TRL**
+### 7.5 Implementation Considerations
 
-```python
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from peft import LoraConfig, get_peft_model
-from trl import SFTTrainer
+**Recommended Stack:**
+- Hugging Face Transformers for model loading and training
+- PEFT (Parameter-Efficient Fine-Tuning) library for LoRA implementation
+- TRL (Transformer Reinforcement Learning) for supervised fine-tuning utilities
+- Accelerate for distributed training across multiple GPUs
+- BitsAndBytes for quantization support
 
-# Load base model
-model = AutoModelForCausalLM.from_pretrained(
-    "meta-llama/Llama-3.2-3B",
-    torch_dtype=torch.float16,
-    device_map="auto"
-)
+**Key Implementation Decisions:**
+- Use model's native tokenizer with appropriate padding strategy
+- Implement gradient accumulation for effective larger batch sizes
+- Apply gradient clipping (max norm 1.0) to prevent training instability
+- Use mixed precision training (FP16 or BF16) for computational efficiency
+- Implement early stopping based on validation set performance
 
-# Configure LoRA
-lora_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    target_modules=["q_proj", "v_proj"],
-    lora_dropout=0.05,
-    bias="none",
-    task_type="CAUSAL_LM"
-)
-
-model = get_peft_model(model, lora_config)
-
-# Training arguments
-training_args = TrainingArguments(
-    output_dir="./compliance-slm",
-    num_train_epochs=3,
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,
-    learning_rate=2e-5,
-    logging_steps=10,
-    save_strategy="epoch",
-    evaluation_strategy="epoch"
-)
-
-# Train
-trainer = SFTTrainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset,
-)
-
-trainer.train()
-```
 
 ---
 
@@ -749,108 +1206,7 @@ Break down performance by:
 - Automatic pass for high-confidence compliant
 - Continuous monitoring of performance
 
----
 
-## 9. Practical Implementation Roadmap
-
-### Phase 1: Data Collection and Preparation (Weeks 1-3)
-
-**Week 1:**
-- [ ] Set up web scrapers for SEC/FINRA
-  - BeautifulSoup/Scrapy for HTML parsing
-  - Store in structured format (JSON/PostgreSQL)
-  - Schedule automated daily updates
-- [ ] Inventory internal compliance documents
-- [ ] Secure access to historical communications
-- [ ] Establish data governance and privacy protocols
-
-**Week 2:**
-- [ ] Clean and normalize SEC/FINRA data
-- [ ] De-identify internal communications
-- [ ] Extract policies from internal documents
-- [ ] Build data versioning system (DVC or similar)
-
-**Week 3:**
-- [ ] Initial exploratory data analysis
-- [ ] Identify violation type taxonomy
-- [ ] Sample and manually label 500 examples for calibration
-- [ ] Document data quality issues
-
-### Phase 2: Synthetic Data Generation (Weeks 4-6)
-
-**Week 4:**
-- [ ] Set up LLM infrastructure (vLLM, TGI, or Ollama)
-- [ ] Develop prompt templates for each generation task
-- [ ] Generate initial 10K QA pairs from regulatory actions
-- [ ] Human review of sample outputs
-
-**Week 5:**
-- [ ] Generate scenarios from internal policies (20K examples)
-- [ ] Create contrastive pairs from internal comms (15K examples)
-- [ ] Implement data augmentation pipeline
-- [ ] Quality filtering and deduplication
-
-**Week 6:**
-- [ ] Generate multi-turn conversations (10K examples)
-- [ ] Create edge case and ambiguous scenarios (10K examples)
-- [ ] Finalize dataset composition
-- [ ] Create train/val/test splits
-
-### Phase 3: Model Fine-Tuning (Weeks 7-9)
-
-**Week 7:**
-- [ ] Set up training infrastructure (GPU cluster/cloud)
-- [ ] Implement data loading and preprocessing
-- [ ] Baseline: Test pre-trained model zero-shot performance
-- [ ] Configure LoRA and training parameters
-
-**Week 8:**
-- [ ] First training run (binary classification)
-- [ ] Evaluate on validation set
-- [ ] Hyperparameter tuning
-- [ ] Ablation studies (data source importance)
-
-**Week 9:**
-- [ ] Train final model(s) 
-- [ ] Implement structured output version
-- [ ] Model compression (quantization, pruning if needed)
-- [ ] Benchmark inference latency
-
-### Phase 4: Evaluation and Iteration (Weeks 10-12)
-
-**Week 10:**
-- [ ] Comprehensive test set evaluation
-- [ ] Error analysis and categorization
-- [ ] Expert human review of sample predictions
-- [ ] Generate adversarial test cases
-
-**Week 11:**
-- [ ] Identify data gaps from error analysis
-- [ ] Generate targeted training data for weak areas
-- [ ] Retrain with augmented dataset
-- [ ] A/B test model versions
-
-**Week 12:**
-- [ ] Finalize model selection
-- [ ] Create deployment package
-- [ ] Document model cards and limitations
-- [ ] Prepare for shadow mode deployment
-
-### Phase 5: Deployment and Monitoring (Week 13+)
-
-**Initial Deployment:**
-- [ ] Deploy in shadow mode (no action taken)
-- [ ] Instrument logging and monitoring
-- [ ] Compare to human baselines
-- [ ] Collect feedback loop data
-
-**Ongoing:**
-- [ ] Weekly performance review
-- [ ] Monthly retraining with new data
-- [ ] Quarterly human evaluation audits
-- [ ] Continuous prompt engineering and data curation
-
----
 
 ## 10. Risk Mitigation and Compliance Considerations
 
@@ -1025,149 +1381,7 @@ Key recommendations:
 
 This approach should yield a production-ready compliance detection system with >85% precision and >90% recall on high-severity violations, deployable on modest infrastructure while maintaining the flexibility and control needed for regulated financial services.
 
----
 
-## Appendix A: Sample Scraping Scripts
-
-### SEC Enforcement Actions Scraper
-
-```python
-import requests
-from bs4 import BeautifulSoup
-import json
-from datetime import datetime
-import time
-
-class SECEnforcementScraper:
-    def __init__(self):
-        self.base_url = "https://www.sec.gov"
-        self.enforcement_url = f"{self.base_url}/litigation/litreleases.html"
-        
-    def scrape_enforcement_list(self, year=None):
-        """Scrape list of enforcement actions"""
-        url = self.enforcement_url
-        if year:
-            url = f"{self.base_url}/litigation/litreleases/litrelarchive/litarch{year}.html"
-            
-        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        actions = []
-        for row in soup.find_all('tr')[1:]:  # Skip header
-            cols = row.find_all('td')
-            if len(cols) >= 3:
-                action = {
-                    'release_no': cols[0].text.strip(),
-                    'date': cols[1].text.strip(),
-                    'title': cols[2].text.strip(),
-                    'url': self.base_url + cols[0].find('a')['href'] if cols[0].find('a') else None
-                }
-                actions.append(action)
-        
-        return actions
-    
-    def scrape_action_details(self, action_url):
-        """Scrape detailed content of specific action"""
-        if not action_url:
-            return None
-            
-        response = requests.get(action_url, headers={'User-Agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Extract main content
-        content_div = soup.find('div', {'id': 'contentArea'}) or soup.find('div', {'class': 'article'})
-        
-        if content_div:
-            text = content_div.get_text(separator='\n', strip=True)
-            return {
-                'url': action_url,
-                'full_text': text,
-                'scraped_at': datetime.now().isoformat()
-            }
-        return None
-    
-    def scrape_year(self, year, output_file):
-        """Scrape all actions for a given year"""
-        print(f"Scraping enforcement actions for {year}...")
-        actions = self.scrape_enforcement_list(year)
-        
-        detailed_actions = []
-        for i, action in enumerate(actions):
-            print(f"Processing {i+1}/{len(actions)}: {action['release_no']}")
-            if action['url']:
-                details = self.scrape_action_details(action['url'])
-                if details:
-                    action.update(details)
-            detailed_actions.append(action)
-            time.sleep(1)  # Be respectful to SEC servers
-        
-        with open(output_file, 'w') as f:
-            json.dump(detailed_actions, f, indent=2)
-        
-        print(f"Saved {len(detailed_actions)} actions to {output_file}")
-        return detailed_actions
-
-# Usage
-scraper = SECEnforcementScraper()
-scraper.scrape_year(2024, 'sec_enforcement_2024.json')
-```
-
-### FINRA Disciplinary Actions Scraper
-
-```python
-import requests
-from bs4 import BeautifulSoup
-import json
-import time
-
-class FINRADisciplinaryScraper:
-    def __init__(self):
-        self.base_url = "https://www.finra.org"
-        self.search_url = f"{self.base_url}/rules-guidance/oversight-enforcement/finra-disciplinary-actions"
-    
-    def search_actions(self, start_date, end_date, page=1):
-        """Search disciplinary actions within date range"""
-        # FINRA uses a search API - adjust based on actual implementation
-        params = {
-            'start_date': start_date,  # Format: YYYY-MM-DD
-            'end_date': end_date,
-            'page': page
-        }
-        
-        # This is a simplified version - actual implementation depends on FINRA's API
-        response = requests.get(self.search_url, params=params)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        actions = []
-        for item in soup.find_all('div', {'class': 'disciplinary-action'}):
-            action = {
-                'case_number': item.find('span', {'class': 'case-number'}).text.strip(),
-                'respondent': item.find('span', {'class': 'respondent'}).text.strip(),
-                'date': item.find('span', {'class': 'date'}).text.strip(),
-                'summary': item.find('div', {'class': 'summary'}).text.strip(),
-                'url': self.base_url + item.find('a')['href']
-            }
-            actions.append(action)
-        
-        return actions
-    
-    def scrape_action_details(self, action_url):
-        """Scrape full details of disciplinary action"""
-        response = requests.get(action_url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        details = {
-            'full_text': soup.find('div', {'class': 'content'}).get_text(separator='\n', strip=True),
-            'violations': [v.text.strip() for v in soup.find_all('span', {'class': 'violation'})],
-            'sanctions': soup.find('div', {'class': 'sanctions'}).text.strip() if soup.find('div', {'class': 'sanctions'}) else None
-        }
-        
-        return details
-
-# Usage
-scraper = FINRADisciplinaryScraper()
-actions = scraper.search_actions('2024-01-01', '2024-12-31')
-```
 
 ---
 
@@ -1254,4 +1468,3 @@ A: [COMPLIANT/NON-COMPLIANT] - [brief explanation]
 
 *Document Version: 1.0*  
 *Last Updated: November 2025*  
-*Prepared for: Vanguard AI Research & Development*
