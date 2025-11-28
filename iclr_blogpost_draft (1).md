@@ -62,9 +62,9 @@ graph TD
     B -->|Semantic Understanding<br/>classification tasks| D[Layer 2: BERT]
     B -->|Complex/Ambiguous<br/>8-12% of cases| E[Layer 3: LLM]
     
-    C -->|100% precision<br/>instant processing| F[Extracted Structured Data]
-    D -->|95% accuracy<br/>50ms per doc| G[Classification Result]
-    E -->|96% accuracy<br/>complex reasoning| H[Nuanced Analysis]
+    C -->|High precision<br/>instant processing| F[Extracted Structured Data]
+    D -->|High accuracy<br/>fast processing| G[Classification Result]
+    E -->|High accuracy<br/>slow, complex reasoning| H[Nuanced Analysis]
     
     F --> I[Final Output]
     G --> I
