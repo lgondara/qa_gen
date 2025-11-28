@@ -161,8 +161,50 @@ The lesson: accept that errors will happen and design your system to handle them
 We had a significant advantage: we are the provincial cancer registry. Our team includes both ML researchers and tumor registrars, with direct access to oncologists for decisions requiring deeper clinical expertise. This internal collaboration was critical to our success.
 
 We started by deeply understanding our registrars' workflows, timing each step and identifying pain points. We ran structured discussions about what actually helps: What takes the most time? Where do errors happen? What would make their job easier?
-
-{% include figure.liquid path="assets/img/2026-04-27-healthcare-nlp/stakeholder-map.png" class="img-fluid" %}
+```mermaid
+graph TB
+    NLP[NLP System]
+    
+    subgraph End Users
+        TR[Tumor Registrars]
+    end
+    
+    subgraph Clinical Experts
+        ONC[Oncologists]
+    end
+    
+    subgraph Technical Team
+        ML[ML Researchers]
+        IT[IT Infrastructure]
+    end
+    
+    subgraph Governance
+        PRIV[Privacy Officers]
+        ADMIN[Administrators]
+    end
+    
+    NLP --- TR
+    NLP --- ONC
+    NLP --- ML
+    NLP --- IT
+    NLP --- PRIV
+    NLP --- ADMIN
+    
+    TR -.workflow needs.-> ML
+    ONC -.clinical validation.-> ML
+    ML -.technical specs.-> IT
+    IT -.infrastructure constraints.-> ML
+    PRIV -.compliance requirements.-> ML
+    ADMIN -.resource allocation.-> ML
+    
+    style NLP fill:#e74c3c,stroke:#333,stroke-width:3px,color:#fff
+    style TR fill:#3498db,stroke:#333,stroke-width:2px
+    style ONC fill:#e67e22,stroke:#333,stroke-width:2px
+    style ML fill:#2ecc71,stroke:#333,stroke-width:2px
+    style IT fill:#2ecc71,stroke:#333,stroke-width:2px
+    style PRIV fill:#f39c12,stroke:#333,stroke-width:2px
+    style ADMIN fill:#f39c12,stroke:#333,stroke-width:2px
+```
 <div class="caption">
     Figure 4: Successful deployment required alignment across multiple groups within the registry, each with different priorities and expertise.
 </div>
