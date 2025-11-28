@@ -105,7 +105,21 @@ The result was high inter-annotator agreement. If humans can't agree on the labe
 
 Medical terminology, reporting formats, and clinical practices all evolve<d-cite key="finlayson2021clinician"></d-cite>. A model trained on 2019 pathology reports can struggle with 2022 reports that use newer terminology and different formats.
 
-{% include figure.liquid path="assets/img/2026-04-27-healthcare-nlp/data-drift-diagram.png" class="img-fluid" %}
+```mermaid
+graph LR
+    A[Training Data<br/>2019-2020] --> B[Model Training]
+    B --> C[High Accuracy<br/>95%]
+    C --> D[Deployment]
+    D --> E[2021 Data<br/>92% accuracy]
+    E --> F[2022 Data<br/>88% accuracy]
+    F --> G[2023 Data<br/>85% accuracy]
+    
+    style A fill:#90EE90
+    style C fill:#90EE90
+    style E fill:#FFD700
+    style F fill:#FFA500
+    style G fill:#FF6347
+```
 <div class="caption">
     Figure 2: Model performance degrades over time as medical terminology and reporting practices evolve without continuous monitoring and retraining.
 </div>
