@@ -1,6 +1,3 @@
-Here is the full, complete blog post in Markdown, incorporating the narrative improvements, technical details from the paper (like privacy and auditing), and the visual diagrams.
-
-```markdown
 ---
 layout: distill
 title: "Beyond the Leaderboard: When SOTA Meets Reality at the BC Cancer Registry"
@@ -231,4 +228,3 @@ The journey from academic ML to deployed healthcare AI requires rethinking every
 The gap between research and production is wide, but it's bridgeable. It requires humility, pragmatism, and a willingness to prioritize patient outcomes over publication metrics.
 
 **The real SOTA is AI that works.**
-```
