@@ -54,7 +54,21 @@ With all the hype surrounding Generative AI, there's enormous pressure to throw 
 
 We advocate for a **pragmatic hybrid architecture**—a waterfall approach where data flows through progressively more sophisticated models.
 
-{% include figure.liquid path="assets/img/2026-04-27-healthcare-nlp/hybrid-architecture.png" class="img-fluid" %}
+```mermaid
+graph TD
+    A[Pathology Report] --> B{Text Splitter}
+    B --> C[Structured Sections]
+    B --> D[Narrative Sections]
+    C --> E[Rule-based Extractor]
+    D --> F[BERT Model]
+    E --> G[Ensemble Layer]
+    F --> G
+    G --> H[Final Prediction]
+    
+    style E fill:#87CEEB
+    style F fill:#90EE90
+    style G fill:#FFD700
+```
 <div class="caption">
     Figure 1: Our pragmatic hybrid architecture processes reports through layers of increasing sophistication, reserving expensive models for genuinely difficult cases.
 </div>
