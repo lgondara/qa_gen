@@ -56,18 +56,29 @@ We advocate for a **pragmatic hybrid architecture**—a waterfall approach where
 
 ```mermaid
 graph TD
-    A[Pathology Report] --> B{Text Splitter}
-    B --> C[Structured Sections]
-    B --> D[Narrative Sections]
-    C --> E[Rule-based Extractor]
-    D --> F[BERT Model]
-    E --> G[Ensemble Layer]
-    F --> G
-    G --> H[Final Prediction]
+    A[Pathology Report] --> B{Text Analysis}
     
-    style E fill:#87CEEB
-    style F fill:#90EE90
-    style G fill:#FFD700
+    B -->|Structured Data<br/>dates, codes, staging| C[Layer 1: Regex]
+    B -->|Semantic Understanding<br/>classification tasks| D[Layer 2: BERT]
+    B -->|Complex/Ambiguous<br/>8-12% of cases| E[Layer 3: LLM]
+    
+    C -->|100% precision<br/>instant processing| F[Extracted Structured Data]
+    D -->|95% accuracy<br/>50ms per doc| G[Classification Result]
+    E -->|96% accuracy<br/>complex reasoning| H[Nuanced Analysis]
+    
+    F --> I[Final Output]
+    G --> I
+    H --> I
+    
+    style A fill:#e8f4f8,stroke:#333,stroke-width:2px
+    style C fill:#aed6f1,stroke:#333,stroke-width:2px
+    style D fill:#a9dfbf,stroke:#333,stroke-width:2px
+    style E fill:#f9e79f,stroke:#333,stroke-width:2px
+    style I fill:#f5b7b1,stroke:#333,stroke-width:2px
+    
+    classDef layer1 fill:#aed6f1,stroke:#333,stroke-width:2px
+    classDef layer2 fill:#a9dfbf,stroke:#333,stroke-width:2px
+    classDef layer3 fill:#f9e79f,stroke:#333,stroke-width:2px
 ```
 <div class="caption">
     Figure 1: Our pragmatic hybrid architecture processes reports through layers of increasing sophistication, reserving expensive models for genuinely difficult cases.
