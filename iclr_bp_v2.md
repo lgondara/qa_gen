@@ -44,11 +44,11 @@ In a standard machine learning task, we define success as maximizing some metric
 *   **False Negatives** are dangerous (missed cancer cases).
 *   **False Positives** create burnout (flooding registrars with irrelevant reports).
 
-We discovered that the metric that actually mattered was **Time Saved Per Report**. Let us do the math from our deployment. Assume a batch of 1,400 reports (1,000 true positives, 400 negatives). Processing a report manually takes roughly 1 minute.
+We discovered that the metric that actually mattered was **Time Saved Per Report**. Let us do the math from our deployment. In a batch of 1,400 reports classified as positive by the old system, we get 1,000 true positives and 400 false positives. Processing a report manually takes roughly 1 minute.
 
 1.  **With old system:** Registrars review all 1,400 reports.
     *   *Total Time:* **1,400 minutes**.
-2.  **With Our Model:** The model filters negatives with high precision, leaving 1,100 reports. Crucially, the model also performs **sentence-level highlighting**, pointing to the specific text explaining the decision.
+2.  **With Our Model:** The model filters false positives with high precision, leaving 1,100 reports, with 100 false positives compared to 400 before. Crucially, the model also performs **sentence-level highlighting**, pointing to the specific text explaining the decision.
     *   *Review Time:* Reduced to **30 seconds** per report due to highlighting.
     *   *Total Time:* **550 minutes**.
 
