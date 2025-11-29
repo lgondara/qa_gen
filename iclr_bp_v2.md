@@ -24,11 +24,11 @@ toc:
 
 ## Introduction
 
-The gap between a Jupyter notebook and a hospital server is not just a matter of deployment engineering—it is a fundamental conflict of objectives.
+The gap between a Jupyter notebook and a hospital server is not just a matter of deployment engineering, it is a fundamental conflict of objectives.
 
 Machine learning researchers are trained to chase the upper bounds of performance metrics. We want the highest F1-score, the lowest perplexity, or the top spot on a leaderboard. But at the **British Columbia Cancer Registry (BCCR)**, where our team processes millions of pathology reports to track cancer incidence and patient outcomes, we learned that a "perfect" model can still fail to solve the actual problem.
 
-Over four years, we deployed various NLP models—from simple regex patterns to fine-tuned BERT models and Large Language Models (LLMs)—for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, and report segmentation.
+Over four years, we deployed various NLP models, from simple regex patterns to fine-tuned BERT models and Large Language Models (LLMs), for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, and report segmentation.
 
 This post shares the unvarnished reality of what worked, what didn't, and why the gap between research innovation and real-world healthcare deployment is wider than most people think.
 
