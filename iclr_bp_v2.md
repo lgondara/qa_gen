@@ -34,9 +34,7 @@ This post shares the unvarnished reality of what worked, what didn't, and why th
 
 ## The Metric Trap
 
-In a standard machine learning task, we define success as maximizing some metric, such as accuracy, F1-score, or Area Under the Curve (AUC). But in BCCR’s production registry pipeline, the cost functions are asymmetric and tied to human labor, not model statistics.
-
-Consider our task of **Reportable Tumor Identification**: determining which pathology reports contain cancers that must be tracked by the registry.
+In a standard machine learning task, we define success as maximizing some metric, such as accuracy, F1-score, or Area Under the Curve (AUC). But in BCCR’s production registry pipeline, the cost functions are asymmetric and tied to human labor, not model statistics. Consider our task of **Reportable Tumor Identification**: determining which pathology reports contain cancers that must be tracked by the registry.
 
 **The Academic Goal:** Maximize F1-score by balancing precision and recall.
 
@@ -46,11 +44,9 @@ Consider our task of **Reportable Tumor Identification**: determining which path
 *   **False Negatives** are dangerous (missed cancer cases).
 *   **False Positives** create burnout (flooding registrars with irrelevant reports).
 
-We discovered that the metric that actually mattered was **Time Saved Per Report**.
+We discovered that the metric that actually mattered was **Time Saved Per Report**. Let us do the math from our deployment. Assume a batch of 1,400 reports (1,000 true positives, 400 negatives). Processing a report manually takes roughly 1 minute.
 
-Let us do the math from our deployment. Assume a batch of **1,400 reports** (1,000 true positives, 400 negatives). Processing a report manually takes roughly **1 minute**.
-
-1.  **Without AI:** Registrars review all 1,400 reports.
+1.  **With old system:** Registrars review all 1,400 reports.
     *   *Total Time:* **1,400 minutes**.
 2.  **With Our Model:** The model filters negatives with high precision, leaving 1,100 reports. Crucially, the model also performs **sentence-level highlighting**, pointing to the specific text explaining the decision.
     *   *Review Time:* Reduced to **30 seconds** per report due to highlighting.
