@@ -1,5 +1,3 @@
-
----
 layout: distill
 title: "Beyond the Leaderboard: When SOTA Meets Reality at the BC Cancer Registry"
 description: In academia, we optimize for F1-scores. In healthcare, we optimize for patient outcomes. This is the story of how the BC Cancer Registry reduced a multi-year backlog not by using the largest model, but by using the right one.
