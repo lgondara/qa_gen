@@ -1,6 +1,7 @@
+---
 layout: distill
-title: "Beyond the Leaderboard: When SOTA Meets Reality at the BC Cancer Registry"
-description: In academia, we optimize for F1-scores. In healthcare, we optimize for patient outcomes. This is the story of how the BC Cancer Registry reduced a multi-year backlog not by using the largest model, but by using the right one.
+title: "When SOTA Meets Reality: Lessons from Deploying NLP at the BC Cancer Registry"
+description: In academia, we optimize for leaderboards. In healthcare, we optimize for patient outcomes. After four years deploying NLP models at the British Columbia Cancer Registry, we learned why high accuracy does not always equal high utility, why simpler models often outperform LLMs, and developed a practical framework for deciding when to build versus buy AI solutions. This post shares hard-won lessons from bridging the gap between research innovation and real-world healthcare deployment.
 date: 2026-04-27
 future: true
 htmlwidgets: true
@@ -15,9 +16,8 @@ toc:
   - name: The Metric Trap
   - name: Do Not Use a Cannon to Kill a Fly
   - name: Data Quality is Everything
-  - name: Error Handling and System Design
-  - name: Privacy is a Non-Negotiable Constraint
-  - name: Co-Design and AI Literacy
+  - name: Error Handling as System Design
+  - name: Co-Design or Fail
   - name: Build vs Buy - The DARE Framework
   - name: Conclusion
 ---
