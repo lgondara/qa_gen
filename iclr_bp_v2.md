@@ -54,7 +54,7 @@ We discovered that the metric that actually mattered was **Time Saved Per Report
 
 This revealed something counterintuitive: A model with lower theoretical accuracy that integrates better into the human-in-the-loop process (via highlighting) is more valuable than a SOTA model that acts as a black box.
 
-> **The Lesson:** Don't just optimize for accuracy; optimize for the bottleneck. While ML experts measure success by ROC curves, organizations measure success by backlog reduction. A tool that aids interpretability often yields higher utility than a "black box" with marginally higher accuracy.
+> **The Lesson:** Don't just optimize for accuracy; optimize for the bottleneck. While ML experts measure success by performance metrics like accuracy and ROC curves, organizations measure success by backlog reduction. A tool that aids interpretability often yields higher utility than a "black box" with marginally higher accuracy.
 
 ## Do Not Use a Cannon to Kill a Fly
 
