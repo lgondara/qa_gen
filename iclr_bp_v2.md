@@ -60,7 +60,7 @@ This revealed something counterintuitive: A model with lower theoretical accurac
 
 With all the hype surrounding Generative AI, there is enormous pressure to throw an LLM at every text processing problem. We found this to be computationally wasteful, prone to hallucinations, and often less effective than simpler methods.
 
-We advocate for a **Pragmatic Hybrid Architecture**—a waterfall approach where data flows through progressively more sophisticated models.
+We advocate for a **Pragmatic Hybrid Architecture**: a waterfall approach where data flows through progressively more sophisticated models.
 
 ```mermaid
 graph TD
@@ -89,16 +89,16 @@ graph TD
 </div>
 
 ### Layer 1: The "Boring" Layer (Regex)
-For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regular expressions provide **100% precision and zero hallucinations**. They are fast, cheap, and explainable. Extracting "Grade 3" from "Histologic grade: 3/3" does not require a GPU, and it certainly doesn't require an API call to a cloud model.
+For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regular expressions provide 100% precision and zero hallucinations. They are fast, cheap, and explainable. Extracting "Grade 3" from "Histologic grade: 3/3" does not require a GPU, and it certainly doesn't require an API call to an expensive model.
 
-### Layer 2: The "Efficient" Layer (Specialized BERT)
-For classification tasks requiring semantic understanding, a fine-tuned clinical BERT model (like Gatortron or BioClinicalBERT) is vastly more efficient than prompting large LLMs. Smaller, domain-specific models often outperform general-purpose LLMs on focused tasks while costing a fraction of the computational budget.
+### Layer 2: The "Efficient" Layer (Specialized BERT-type Models)
+For classification tasks requiring semantic understanding, a fine-tuned BERT model (like Gatortron or BioClinicalBERT) is vastly more efficient than prompting large LLMs. Smaller, domain-specific models often outperform general-purpose LLMs on focused tasks while costing a fraction of the computational budget.
 
 ### Layer 3: The "Smart" Layer (LLMs)
-We reserve Generative AI for the **8-12% of cases** that are ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles scenarios where simpler methods fail.
+We reserve Generative AI for the 8-12% of cases that are ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles scenarios where simpler methods fail.
 
 ### The Unsung Hero: Report Segmentation
-Pathology reports are full of noise: headers, disclaimers, clinical history, and gross descriptions. We found that using a lightweight model to **segment the report**—feeding only the relevant sections (e.g., Diagnosis) to downstream models—improved performance more than simply scaling up model size.
+Pathology reports are full of noise: headers, disclaimers, clinical history, and gross descriptions. We found that using a lightweight model to segment the report and feeding only the relevant sections (e.g., diagnosis) to downstream models improved performance more than simply scaling up model size.
 
 > **The Lesson:** Model selection should be pragmatic, not trendy. Match the complexity of the method to the complexity of the problem. If a regex works, use it. Preprocessing (segmentation) often delivers higher ROI than increasing parameter count.
 
