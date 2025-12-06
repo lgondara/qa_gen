@@ -152,11 +152,11 @@ graph TB
     NLP[NLP System]
     
     subgraph End Users
-        TR[Tumor Registrars]
+        TR[Subject Matter Experts]
     end
     
     subgraph Clinical Experts
-        ONC[Oncologists]
+        ONC[Clinicians]
     end
     
     subgraph Technical Team
