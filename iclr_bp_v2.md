@@ -29,7 +29,7 @@ The gap between a Jupyter notebook and a hospital server is not just a matter of
 
 Machine learning researchers are trained to chase the upper bounds of performance metrics. We want the highest F1-score, the lowest perplexity, or the top spot on a leaderboard. But at the {Anonymous Healthcare Organization}, where our team processes millions of pathology reports to track cancer incidence and patient outcomes, we learned that a "perfect" model can still fail to solve the actual problem.
 
-Over the course of four years, we deployed various NLP models, from simple regex patterns to fine-tuned BERT-type models and Large Language Models (LLMs), for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, automated staging, and report segmentation.
+Over the course of four years, we deployed various NLP models, from simple regex patterns to fine-tuned BERT-type<d-cite key="lee2020biobert,alsentzer2019publicly"></d-cite> models and Large Language Models (LLMs), for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, automated staging, and report segmentation.
 
 This post shares the unvarnished reality of what worked, what didn't, and why the gap between research innovation and real-world healthcare deployment is wider than most people think.
 
@@ -47,7 +47,7 @@ The result was a total processing time of 550 minutes, a nearly 60% reduction in
 
 ## Do Not Use a Cannon to Kill a Fly
 
-With the current hype surrounding Generative AI, there is enormous pressure to throw an LLM at every text processing problem. In our experience, this approach is often computationally wasteful, prone to hallucinations, and less robust than simpler methods. We advocate for a *Pragmatic Hybrid Architecture*, essentially a waterfall approach where data flows through progressively more sophisticated models only when necessary.
+With the current hype surrounding Generative AI {cite}, there is enormous pressure to throw an LLM at every text processing problem. In our experience, this approach is often computationally wasteful, prone to hallucinations, and less robust than simpler methods. We advocate for a *Pragmatic Hybrid Architecture*, essentially a waterfall approach where data flows through progressively more sophisticated models only when necessary.
 
 ```mermaid
 graph TD
@@ -82,11 +82,11 @@ graph TD
 
 The first line of defense is what we call the *"Boring Layer"*: regular expressions. For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regex provides 100% precision with zero hallucinations. It is fast, cheap, and explainable. Extracting "Grade 3" from a standardized field does not require a GPU.
 
-When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the *"Efficient Layer"*. Here, fine-tuned BERT-type models (like Gatortron or ClinicalBERT) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget.
+When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the *"Efficient Layer"*. Here, fine-tuned BERT-type models (like Gatortron {cite} or ClinicalBERT {cite}) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget {cite}.
 
 We reserve the *"Smart Layer"*: Generative AI—for the 8-12% of cases that are genuinely ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles the edge cases where simpler methods fail.
 
-Crucially, we found that *Report Segmentation* was an unsung hero. Pathology reports are filled with noisy headers, disclaimers, and legal text. Using a lightweight model to strip this noise and feed only the relevant diagnostic text to downstream models improved performance more than simply scaling up the model size. As is often the case, better preprocessing beats bigger parameters.
+Crucially, we found that *Report Segmentation* was an unsung hero. Pathology reports are filled with noisy headers, disclaimers, and legal text. Using a lightweight model to strip this noise and feed only the relevant diagnostic text to downstream models improved performance more than simply scaling up the model size. As is often the case, better preprocessing beats bigger parameters {cite}.
 
 > **The Lesson:** Model selection should be pragmatic, not trendy. Match the complexity of the method to the complexity of the problem. If a regex works, use it. Preprocessing (segmentation) often delivers higher ROI than increasing parameter count.
 
@@ -135,7 +135,7 @@ To ensure long-term safety, we adopted a *clinical-trial design approach to audi
 
 When working with sensitive patient data, privacy cannot be an afterthought; it must be a fundamental architectural constraint. Large Language Models have a known propensity to memorize training data, which poses a catastrophic risk in a healthcare organization. If an adversary could query a model to reconstruct an individual's data, we would have failed our patients.
 
-To mitigate this, we rely primarily on *local, open-weights models* (like Llama or Mistral) hosted entirely within our firewall. Sending patient data to a public API is simply not an option for us. Additionally, where possible, we integrated *Differential Privacy (DP)* into our training pipeline. DP provides a mathematical guarantee that individual patient data cannot be reverse-engineered from the model weights, but it degrades utility. In scenarios where high utility is desired, in addition to locally hosted models, we only use fully anonymized data.
+To mitigate this, we rely primarily on *local, open-weights models* (like Llama or Mistral) hosted entirely within our firewall. Sending patient data to a public API is simply not an option for us. Additionally, where possible, we integrated *Differential Privacy (DP)* {cite} into our training pipeline. DP provides a mathematical guarantee that individual patient data cannot be reverse-engineered from the model weights, but it degrades utility. In scenarios where high utility is desired, in addition to locally hosted models, the models are only trained on fully anonymized data.
 
 > **The Lesson:** Privacy must be integrated into the development lifecycle, not added at the end. Prefer local, offline models for sensitive data, and evaluate the trade-off between Differential Privacy guarantees, model utility, and data anonymization.
 
@@ -195,7 +195,7 @@ graph TB
     Figure 4: Successful deployment required alignment across multiple groups within the organization, each with different priorities and expertise.
 </div>
 
-This co-design process also required investing in *AI Literacy*. We couldn't just drop an AI tool on clinical staff and walk away; we had to teach them how the models worked, where they failed, and why they made certain predictions. When domain experts understand the "black box," they trust it more and become better at catching its errors.
+This co-design process also required investing in *AI Literacy* {cite}. We couldn't just drop an AI tool on clinical staff and walk away; we had to teach them how the models worked, where they failed, and why they made certain predictions. When domain experts understand the "black box," they trust it more and become better at catching its errors.
 
 > **The Lesson:** Involve end-users from Day 1. Co-designing the solution ensures you are solving the business problem (backlogs), not just a technical problem. Furthermore, educating your users about AI capabilities and limitations builds the trust required for adoption.
 
