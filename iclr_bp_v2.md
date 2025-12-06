@@ -1,11 +1,15 @@
 ---
 layout: distill
 title: "When SOTA Meets Reality: Lessons from Deploying NLP at a Large Healthcare Organization"
-description: In academia, we optimize for F1-scores. In healthcare, we optimize for patient outcomes. This is the story of how a large healthcare organization reduced a multi-year backlog not by using the largest model, but by using the right one.
-date: 2026-04-27
+description: In academia, we optimize for accuracy. In healthcare, we optimize for patient outcomes. This is the story of how a large healthcare organization reduced a multi-year backlog not by using the largest model, but by using the right one.
+date: 2025-12-06
 future: true
 htmlwidgets: true
 
+mermaid:                              
+  enabled: true
+  zoomable: true
+  
 authors:
   - name: Anonymous
 
