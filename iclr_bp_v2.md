@@ -47,16 +47,14 @@ The result was a total processing time of 550 minutes, a nearly 60% reduction in
 
 ## Do Not Use a Cannon to Kill a Fly
 
-With the current hype surrounding Generative AI, there is enormous pressure to throw an LLM at every text processing problem. In our experience, this approach is often computationally wasteful, prone to hallucinations, and less robust than simpler methods.
-
-We advocate for a **Pragmatic Hybrid Architecture**, essentially a waterfall approach where data flows through progressively more sophisticated models only when necessary.
+With the current hype surrounding Generative AI, there is enormous pressure to throw an LLM at every text processing problem. In our experience, this approach is often computationally wasteful, prone to hallucinations, and less robust than simpler methods. We advocate for a *Pragmatic Hybrid Architecture*, essentially a waterfall approach where data flows through progressively more sophisticated models only when necessary.
 
 ```mermaid
 graph TD
     A[Pathology Report] --> B{Text Analysis}
     
     B -->|Structured Data<br/>dates, codes, staging| C[Layer 1: Regex]
-    B -->|Semantic Understanding<br/>classification tasks| D[Layer 2: Clinical BERT]
+    B -->|Semantic Understanding<br/>classification tasks| D[Layer 2: BERT]
     B -->|Complex/Ambiguous<br/>8-12% of cases| E[Layer 3: LLM]
     
     C -->|High precision<br/>instant processing| F[Extracted Structured Data]
@@ -72,18 +70,22 @@ graph TD
     style D fill:#a9dfbf,stroke:#333,stroke-width:2px
     style E fill:#f9e79f,stroke:#333,stroke-width:2px
     style I fill:#f5b7b1,stroke:#333,stroke-width:2px
+    
+    classDef layer1 fill:#aed6f1,stroke:#333,stroke-width:2px
+    classDef layer2 fill:#a9dfbf,stroke:#333,stroke-width:2px
+    classDef layer3 fill:#f9e79f,stroke:#333,stroke-width:2px
 ```
 <div class="caption">
     Figure 1: Our pragmatic hybrid architecture processes reports through layers of increasing sophistication, reserving expensive models for genuinely difficult cases.
 </div>
 
-The first line of defense is what we call the **"Boring Layer"**: regular expressions. For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regex provides 100% precision with zero hallucinations. It is fast, cheap, and explainable. Extracting "Grade 3" from a standardized field does not require a GPU.
+The first line of defense is what we call the *"Boring Layer"*: regular expressions. For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regex provides 100% precision with zero hallucinations. It is fast, cheap, and explainable. Extracting "Grade 3" from a standardized field does not require a GPU.
 
-When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the **"Efficient Layer."** Here, fine-tuned clinical BERT models (like Gatortron or BioClinicalBERT) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget.
+When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the *"Efficient Layer"*. Here, fine-tuned BERT-type models (like Gatortron or ClinicalBERT) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget.
 
-We reserve the **"Smart Layer"**—Generative AI—for the 8-12% of cases that are genuinely ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles the edge cases where simpler methods fail.
+We reserve the *"Smart Layer"*: Generative AI—for the 8-12% of cases that are genuinely ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles the edge cases where simpler methods fail.
 
-Crucially, we found that **Report Segmentation** was an unsung hero. Pathology reports are filled with noise—headers, disclaimers, and legal text. Using a lightweight model to strip this noise and feed only the relevant diagnostic text to downstream models improved performance more than simply scaling up the model size. As is often the case, better preprocessing beats bigger parameters.
+Crucially, we found that *Report Segmentation* was an unsung hero. Pathology reports are filled with noisy headers, disclaimers, and legal text. Using a lightweight model to strip this noise and feed only the relevant diagnostic text to downstream models improved performance more than simply scaling up the model size. As is often the case, better preprocessing beats bigger parameters.
 
 > **The Lesson:** Model selection should be pragmatic, not trendy. Match the complexity of the method to the complexity of the problem. If a regex works, use it. Preprocessing (segmentation) often delivers higher ROI than increasing parameter count.
 
