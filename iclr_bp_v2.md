@@ -79,6 +79,7 @@ graph TD
     Figure 1: Our pragmatic hybrid architecture processes reports through layers of increasing sophistication, reserving expensive models for genuinely difficult cases.
 </div>
 
+
 The first line of defense is what we call the *"Boring Layer"*: regular expressions. For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regex provides 100% precision with zero hallucinations. It is fast, cheap, and explainable. Extracting "Grade 3" from a standardized field does not require a GPU.
 
 When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the *"Efficient Layer"*. Here, fine-tuned BERT-type models (like Gatortron or ClinicalBERT) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget.
@@ -91,11 +92,11 @@ Crucially, we found that *Report Segmentation* was an unsung hero. Pathology rep
 
 ## Data Quality is Everything
 
-In academic datasets, labels are usually treated as ground truth. In healthcare, we learned that labels are often just opinions. When we analyzed our initial training data, we found that label noise was a massive bottleneck; models trained on a single annotator's data were essentially learning that specific person's biases rather than medical truth.
+In academic datasets, labels are usually treated as ground truth. In healthcare, we learned that labels are often opinions. When we analyzed our initial training data, we found that label noise was a massive bottleneck; models trained on a single annotator's data were essentially learning that specific person's biases rather than the medical truth.
 
-To fix this, we moved to a **consensus-based approach**. We paused modeling to spend weeks strictly defining a "Code Book"—a living document of annotation guidelines. We ran pilot studies where multiple experts labeled the same reports, and where they disagreed, we held discussions to refine the definitions. If human experts cannot agree on the label for a specific report, a model has no chance of learning it correctly.
+To fix this, we recommend a *consensus-based approach*. Where we define a "Code Book": a living document of annotation guidelines. We ran pilot studies where multiple experts labeled the same reports, and where they disagreed, we held discussions to refine the definitions. If human experts cannot agree on the label for a specific report, a model has no chance of learning it correctly.
 
-We also had to contend with the reality that medical data is not static. Terminology evolves, and reporting formats change. A model trained on 2019 pathology reports will inevitably struggle with 2024 reports using new WHO classifications.
+We also had to contend with the reality that medical data is not static. Terminology evolves, and reporting formats change. A model trained on 2019 pathology reports will inevitably struggle with 2024 reports using new classifications from the governing bodies (WHO, NHS, etc.).
 
 ```mermaid
 graph LR
@@ -116,9 +117,9 @@ graph LR
     Figure 2: Without continuous monitoring, model performance degrades over time as medical terminology shifts.
 </div>
 
-This necessitated **Automated Drift Detection**. By monitoring prediction distributions and confidence scores, we can detect when the model becomes less confident or when the data distribution shifts, signaling a need for retraining.
+This necessitated *Automated Drift Detection*. By monitoring prediction distributions, confidence scores, and with human-in-the-loop approach, we can detect when the model becomes less confident or when the data distribution shifts, signaling a need for retraining.
 
-> **The Lesson:** Data quality and representativeness matter more than model sophistication. Invest in a "Code Book" and consensus processes early. Expect your data to drift, and build monitoring systems that alert you when it does.
+> **The Lesson:** Data quality and representativeness matter more than model sophistication. Invest in a "Code Book" and consensus processes early. Expect your drift in your data, and build monitoring systems that alert you when it does.
 
 ## Error Handling and System Design
 
