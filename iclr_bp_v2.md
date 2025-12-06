@@ -133,11 +133,11 @@ To ensure long-term safety, we adopted a *clinical-trial design approach to audi
 
 ## Privacy as an Architectural Constraint
 
-When working with sensitive patient data, privacy cannot be an afterthought; it must be a fundamental architectural constraint. Large Language Models have a known propensity to memorize training data, which poses a catastrophic risk in a cancer registry. If an adversary could query a model to reconstruct a pathology report, we would have failed our patients.
+When working with sensitive patient data, privacy cannot be an afterthought; it must be a fundamental architectural constraint. Large Language Models have a known propensity to memorize training data, which poses a catastrophic risk in a healthcare organization. If an adversary could query a model to reconstruct an individual's data, we would have failed our patients.
 
-To mitigate this, we rely primarily on **local, open-weights models** (like Llama or Mistral) hosted entirely within our firewall. Sending patient data to a public API is simply not an option for us. Additionally, we integrated **Differential Privacy (DP)** into our training pipeline. While DP introduces noise that can slightly degrade utility, it provides a mathematical guarantee that individual patient data cannot be reverse-engineered from the model weights. We accept the slight trade-off in performance for the absolute necessity of privacy.
+To mitigate this, we rely primarily on *local, open-weights models* (like Llama or Mistral) hosted entirely within our firewall. Sending patient data to a public API is simply not an option for us. Additionally, where possible, we integrated *Differential Privacy (DP)* into our training pipeline. DP provides a mathematical guarantee that individual patient data cannot be reverse-engineered from the model weights, but it degrades utility. In scenarios where high utility is desired, in addition to locally hosted models, we only use fully anonymized data.
 
-> **The Lesson:** Privacy must be integrated into the development lifecycle, not added at the end. Prefer local, offline models for sensitive data, and evaluate the trade-off between Differential Privacy guarantees and model utility.
+> **The Lesson:** Privacy must be integrated into the development lifecycle, not added at the end. Prefer local, offline models for sensitive data, and evaluate the trade-off between Differential Privacy guarantees, model utility, and data anonymization.
 
 ## Co-Design and AI Literacy
 
