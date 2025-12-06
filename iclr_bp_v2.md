@@ -1,8 +1,7 @@
-
 ---
 layout: distill
-title: "Beyond the Leaderboard: When SOTA Meets Reality at the BC Cancer Registry"
-description: In academia, we optimize for F1-scores. In healthcare, we optimize for patient outcomes. This is the story of how the BC Cancer Registry reduced a multi-year backlog not by using the largest model, but by using the right one.
+title: "When SOTA Meets Reality: Lessons from Deploying NLP at a Large Healthcare Organization"
+description: In academia, we optimize for F1-scores. In healthcare, we optimize for patient outcomes. This is the story of how a large healthcare organization reduced a multi-year backlog not by using the largest model, but by using the right one.
 date: 2026-04-27
 future: true
 htmlwidgets: true
