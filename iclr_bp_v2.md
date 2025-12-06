@@ -25,27 +25,25 @@ toc:
 
 ## Introduction
 
-The gap between a Jupyter notebook and a hospital server is not just a matter of deployment engineering—it is a fundamental conflict of objectives.
+The gap between a Jupyter notebook and a hospital server is not just a matter of deployment engineering, it is a fundamental conflict of objectives.
 
-Machine learning researchers are trained to chase the upper bounds of performance metrics. We want the highest F1-score, the lowest perplexity, or the top spot on a leaderboard. But at the **British Columbia Cancer Registry (BCCR)**, where our team processes millions of pathology reports to track cancer incidence and patient outcomes, we learned that a "perfect" model can still fail to solve the actual problem.
+Machine learning researchers are trained to chase the upper bounds of performance metrics. We want the highest F1-score, the lowest perplexity, or the top spot on a leaderboard. But at the {Anonymous Healthcare Organization}, where our team processes millions of pathology reports to track cancer incidence and patient outcomes, we learned that a "perfect" model can still fail to solve the actual problem.
 
-Over four years, we deployed various NLP models—from simple regex patterns to fine-tuned BERT models and Large Language Models (LLMs)—for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, and report segmentation.
+Over the course of four years, we deployed various NLP models, from simple regex patterns to fine-tuned BERT-type models and Large Language Models (LLMs), for tasks including tumor reportability classification, cancer relapse detection, anatomical site identification, automated staging, and report segmentation.
 
 This post shares the unvarnished reality of what worked, what didn't, and why the gap between research innovation and real-world healthcare deployment is wider than most people think.
 
 ## The Metric Trap
 
-In standard machine learning tasks, we define success as maximizing a metric like accuracy, F1-score, or Area Under the Curve (AUC). However, in BCCR’s production registry pipeline, the cost functions are asymmetric and tied to human labor rather than model statistics.
+In standard machine learning tasks, we define success as maximizing a metric like accuracy, F1-score, or Area Under the Curve (AUC). However, in {Anonymous Healthcare Organization's} production pipeline, the cost functions are asymmetric and tied to human labor rather than model statistics.
 
-Consider our task of **Reportable Tumor Identification**, which involves determining which pathology reports contain cancers that must be tracked by the registry. In the academic view, the goal is simply to maximize the F1-score by balancing precision and recall. But the operational reality is far more complex. Every "Positive" prediction triggers a manual review by a highly trained tumor registrar to finalize the case, while every "Negative" is archived. This creates a high-stakes environment where false negatives result in missed cancer cases, but false positives flood registrars with irrelevant reports, leading to burnout.
+Consider our task of *Reportable Tumor Identification*, which involves determining which pathology reports contain cancers that must be tracked and reported. In the academic view, the goal is simply to maximize the F1-score by balancing precision and recall. But the operational reality is far more complex. Every "Positive" prediction triggers a manual review by a highly trained tumor registrar to finalize the case, while every "Negative" is archived. This creates a high-stakes environment where false negatives result in missed cancer cases, but false positives flood registrars with irrelevant reports, leading to burnout.
 
-We discovered that the metric that actually mattered was **Time Saved Per Report**.
-
-When we analyzed the operational data, the results were counterintuitive. Suppose we have a batch of 1,400 reports where manual processing takes about one minute per document. Without AI, the registrars face 1,400 minutes of work. Our deployed model filtered out the clear negatives, leaving 1,100 reports. If we had only focused on filtering, the savings would be modest. However, by designing the model to perform **sentence-level highlighting**—pinpointing the exact evidence for its decision—we reduced the human review time from 60 seconds to 30 seconds per report.
+We discovered that the metric that actually mattered was *Time Saved Per Report*. When we analyzed the operational data, the results were counterintuitive. Using our older (purely rule-based) NLP system, for every 1000 true positives, we will get 400 false positives. Manual processing by registrars takes about one minute per report, leading to 1400 minutes of work. Using the updated system with language models, we were able to bring down the false positives to 100, leading to a total 1100 reports compared to 1400. If we had only focused on filtering, the savings would be modest. However, by designing the model to perform *sentence-level highlighting*, pinpointing the exact evidence for its decision, we reduced the human review time from 60 seconds to 30 seconds per report.
 
 The result was a total processing time of 550 minutes, a nearly 60% reduction in workload. This highlighted a critical reality: a model with lower theoretical accuracy that integrates effectively into the human workflow (via explainability features) is vastly more valuable than a "State of the Art" black box that achieves marginally higher accuracy but offers no assistive utility.
 
-> **The Lesson:** Don't just optimize for accuracy; optimize for the bottleneck. While ML experts measure success by ROC curves, organizations measure success by backlog reduction. A tool that aids interpretability often yields higher utility than a "black box" with marginally higher accuracy.
+> **The Lesson:** Don't just optimize for accuracy; optimize for the bottleneck. While ML experts measure success by accuracy and ROC curves, organizations measure success by backlog reduction. A tool that aids interpretability often yields higher utility than a "black box" with marginally higher accuracy.
 
 ## Do Not Use a Cannon to Kill a Fly
 
