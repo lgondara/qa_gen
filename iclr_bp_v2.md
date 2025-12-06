@@ -141,9 +141,9 @@ To mitigate this, we rely primarily on *local, open-weights models* (like Llama 
 
 ## Co-Design and AI Literacy
 
-We had a significant structural advantage: we are the provincial cancer registry, meaning our team includes ML researchers, tumor registrars, and oncologists working side-by-side.
+We had a significant structural advantage, being a large healthcare organization, our team includes ML researchers, tumor registrars, other subject matter experts, and clinicians working side-by-side.
 
-This collaboration forced a critical pivot in our project. Initially, our goal was purely technical: "Create an NLP solution that is 99% accurate." However, after sitting down with the registrars and understanding their daily struggles, we realized that accuracy wasn't their primary pain point. Their problem was the **24-month backlog**.
+This collaboration forced a critical pivot in our project. Initially, our goal was purely technical: "Create an NLP solution that is 99% accurate." However, after sitting down with other stake-holders and understanding their daily struggles, we realized that accuracy wasn't their primary pain point. Their problem was the *24-month backlog* due to them being inundated with data.
 
 We revised our goal to "Reduce the backlog by 50%," which changed our entire technical roadmap. Instead of building a black-box classifier to replace humans, we built an assistive tool that highlights evidence to speed them up.
 
@@ -164,26 +164,38 @@ graph TB
         IT[IT Infrastructure]
     end
     
+    subgraph Governance
+        PRIV[Privacy Officers]
+        ADMIN[Administrators]
+    end
+    
     NLP --- TR
     NLP --- ONC
     NLP --- ML
     NLP --- IT
+    NLP --- PRIV
+    NLP --- ADMIN
     
     TR -.workflow needs.-> ML
     ONC -.clinical validation.-> ML
     ML -.technical specs.-> IT
     IT -.infrastructure constraints.-> ML
+    PRIV -.compliance requirements.-> ML
+    ADMIN -.resource allocation.-> ML
     
     style NLP fill:#e74c3c,stroke:#333,stroke-width:3px,color:#fff
     style TR fill:#3498db,stroke:#333,stroke-width:2px
     style ONC fill:#e67e22,stroke:#333,stroke-width:2px
     style ML fill:#2ecc71,stroke:#333,stroke-width:2px
+    style IT fill:#2ecc71,stroke:#333,stroke-width:2px
+    style PRIV fill:#f39c12,stroke:#333,stroke-width:2px
+    style ADMIN fill:#f39c12,stroke:#333,stroke-width:2px
 ```
 <div class="caption">
-    Figure 3: Successful deployment required alignment across multiple groups. Without registrar input, we would have solved the wrong problem.
+    Figure 4: Successful deployment required alignment across multiple groups within the organization, each with different priorities and expertise.
 </div>
 
-This co-design process also required investing in **AI Literacy**. We couldn't just drop an AI tool on clinical staff and walk away; we had to teach them how the models worked, where they failed, and why they made certain predictions. When domain experts understand the "black box," they trust it more and become better at catching its errors.
+This co-design process also required investing in *AI Literacy*. We couldn't just drop an AI tool on clinical staff and walk away; we had to teach them how the models worked, where they failed, and why they made certain predictions. When domain experts understand the "black box," they trust it more and become better at catching its errors.
 
 > **The Lesson:** Involve end-users from Day 1. Co-designing the solution ensures you are solving the business problem (backlogs), not just a technical problem. Furthermore, educating your users about AI capabilities and limitations builds the trust required for adoption.
 
