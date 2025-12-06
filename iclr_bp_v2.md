@@ -214,7 +214,7 @@ To help organizations navigate this "Build vs. Buy" decision, we propose the **D
 
 ## Conclusion
 
-The journey from academic machine learning to deployed healthcare AI requires rethinking many of the instincts we developed in grad school. We learned that the solution saving the most time isn't always the one with the highest accuracy on a held-out test set, and that "boring" tools like regex often outperform the latest LLMs on structured tasks.
+The journey from academic machine learning to deployed healthcare AI requires rethinking many of our ingrained instincts. We learned that the solution saving the most time isn't always the one with the highest accuracy on a held-out test set, and that "boring" tools like regex often outperform the latest LLMs on structured tasks.
 
 Most importantly, we learned that deployment cannot be an afterthought. It requires deep collaboration between researchers and domain experts to ensure we are solving the right problems. By prioritizing workflows over metrics, respecting data privacy as a hard constraint, and demanding rigorous validation, we can bridge the gap between research and production.
 
