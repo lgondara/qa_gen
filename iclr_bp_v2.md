@@ -131,6 +131,24 @@ No model is perfect, and in healthcare, "hallucination" is not just a quirk, itâ
 
 We implemented *Confidence-Based Routing* to manage this risk. High-confidence predictions are processed automatically, while low-confidence predictions are flagged for human review (human-in-the-loop). Furthermore, if a report looks drastically different from the training data (out-of-distribution), it defaults to the manual queue.
 
+```mermaid
+graph TD
+    A[Incoming Report] --> B{Confidence Score}
+    B -->|High Confidence| C[Automated Processing]
+    B -->|Low Confidence| D[Human Review Queue]
+    C --> E{Audit Sample}
+    E -->|Random Sample| F[Quality Check]
+    E -->|Pass Through| G[Production Database]
+    F --> H{Discrepancy?}
+    H -->|Yes| I[Flag for Investigation]
+    H -->|No| G
+    D --> J[Expert Review]
+    J --> G
+```
+<div class="caption">
+    Figure 3: Multi-layer error mitigation pipeline combining confidence-based routing, human-in-the-loop validation, and continuous auditing.
+</div>
+
 To ensure long-term safety, we adopted a *clinical-trial design approach to auditing*. Rather than ad-hoc spot checks, we established a rigorous sampling protocol to estimate error rates with statistical significance. Every month, we conduct a structured audit to ensure the model hasn't silently degraded. Trust in AI is not built on a single high accuracy score, but on the assurance that the system knows when it doesn't know.
 
 > **The Lesson:** Accept that errors will happen and design your system to handle them gracefully. Confidence thresholds, human-in-the-loop validation, and statistically rigorous auditing are essential for reliable healthcare AI systems.
