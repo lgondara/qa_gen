@@ -120,6 +120,7 @@ graph LR
 <div class="caption">
     Figure 2: Without continuous monitoring, model performance degrades over time as medical terminology shifts.
 </div>
+<br>
 
 This necessitated *Automated Drift Detection*. By monitoring prediction distributions, confidence scores, and with human-in-the-loop approach, we can detect when the model becomes less confident or when the data distribution shifts, signaling a need for retraining.
 
@@ -148,6 +149,7 @@ graph TD
 <div class="caption">
     Figure 3: Multi-layer error mitigation pipeline combining confidence-based routing, human-in-the-loop validation, and continuous auditing.
 </div>
+<br>
 
 To ensure long-term safety, we adopted a *clinical-trial design approach to auditing*. Rather than ad-hoc spot checks, we established a rigorous sampling protocol to estimate error rates with statistical significance. Routinely, we conduct a structured audit to ensure the model hasn't silently degraded. Trust in AI is not built on a single high accuracy score, but on the assurance that the system knows when it doesn't know.
 
@@ -216,6 +218,7 @@ graph TB
 <div class="caption">
     Figure 4: Successful deployment required alignment across multiple groups within the organization, each with different priorities and expertise.
 </div>
+<br>
 
 This co-design process also required investing in *AI Literacy* <d-cite key="yi2021establishing"></d-cite>. We couldn't just drop an AI tool on clinical staff and walk away; we had to teach them how the models worked, where they failed, and why they made certain predictions. When domain experts understand the "black box," they trust it more and become better at catching its errors.
 
