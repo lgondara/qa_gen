@@ -82,7 +82,7 @@ graph TD
 <div class="caption">
     Figure 1: Our pragmatic hybrid architecture processes reports through layers of increasing sophistication, reserving expensive models for genuinely difficult cases.
 </div>
-
+<br>
 
 The first line of defense is what we call the *"Boring Layer"*: regular expressions. For structured data like dates, histology codes, or tumor staging notation (e.g., "T1N0M0"), regex provides 100% precision with zero hallucinations. It is fast, cheap, and explainable. Extracting "Grade 3" from a standardized field does not require a GPU.
 
