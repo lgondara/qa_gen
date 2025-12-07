@@ -88,7 +88,7 @@ The first line of defense is what we call the *"Boring Layer"*: regular expressi
 
 When semantic understanding is required, such as distinguishing between a patient's history of cancer versus a current diagnosis, we escalate to the *"Efficient Layer"*. Here, fine-tuned BERT-type models (like Gatortron <d-cite key="yang2022gatortron"></d-cite> or ClinicalBERT <d-cite key="alsentzer2019publicly"></d-cite>) excel. These smaller, domain-specific models often outperform general-purpose LLMs on focused classification tasks while costing a fraction of the computational budget <d-cite key="gu2021domain"></d-cite>.
 
-We reserve the *"Smart Layer"*: Generative AI—for the 8-12% of cases that are genuinely ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles the edge cases where simpler methods fail.
+We reserve the *"Smart Layer"*: Generative AI, for the 8-12% of cases that are genuinely ambiguous, require complex reasoning, or involve summarization. This represents a small fraction of our volume but handles the edge cases where simpler methods fail.
 
 Crucially, we found that *Report Segmentation* was an unsung hero. Pathology reports are filled with noisy headers, disclaimers, and legal text. Using a lightweight model to strip this noise and feed only the relevant diagnostic text to downstream models improved performance more than simply scaling up the model size. As is often the case, better preprocessing beats bigger parameters <d-cite key="smelyakov2020effectiveness"></d-cite>.
 
