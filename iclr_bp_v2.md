@@ -165,7 +165,7 @@ To mitigate this, we rely primarily on *local, open-weights models* (like Llama 
 
 We had a significant structural advantage, being a large healthcare organization, our team includes ML researchers, tumor registrars, other subject matter experts, and clinicians working side-by-side.
 
-This collaboration forced a critical pivot in our project. Initially, our goal was purely technical: "Create an NLP solution that is 99% accurate." However, after sitting down with other stake-holders and understanding their daily struggles, we realized that accuracy wasn't their primary pain point. Their problem was the *24-month backlog* due to them being inundated with data.
+This collaboration forced a critical pivot in our project. Initially, our goal was purely technical: "Create an NLP solution that is 99% accurate." However, after sitting down with other stakeholders and understanding their daily struggles, we realized that accuracy wasn't their primary pain point. Their problem was the *24-month backlog* due to them being inundated with data.
 
 We revised our goal to "Reduce the backlog by 50%," which changed our entire technical roadmap. Instead of building a black-box classifier to replace humans, we built an assistive tool that highlights evidence to speed them up.
 
