@@ -1,132 +1,343 @@
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+)
+from peft import (
+    LoraConfig,
+    get_peft_model,
+    prepare_model_for_kbit_training,
+)
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+from datasets import load_from_disk
+from accelerate import Accelerator
 import os
-import json
-import glob
-from typing import List, Dict
-from openai import OpenAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# --- CONFIGURATION ---
-# Point this to your documents folder
-SOURCE_DOCS_DIR = "./raw_compliance_docs"
-OUTPUT_FILE = "compliance_finetune_dataset.jsonl"
+# ============================================================================
+# INITIALIZE ACCELERATOR
+# ============================================================================
 
-# Initialize OpenAI (or point to a local server like vLLM/Ollama)
-client = OpenAI(api_key="YOUR_API_KEY_HERE")
+accelerator = Accelerator()
 
-# --- THE PROMPT STRATEGY ---
-# This is the most critical part. We force the LLM to act as a
-# Senior Compliance Officer creating training materials for juniors.
-GENERATION_PROMPT = """
-You are an expert Financial Crimes Compliance Officer. I will provide you with a section of a regulatory document or enforcement action.
-Your task is to generate 3 distinct training examples based ONLY on this text.
+# Only print from main process
+def print_main(msg):
+    if accelerator.is_main_process:
+        print(msg)
 
-The output must be a JSON object with a key "pairs" containing a list of 3 objects.
-Each object must have: "instruction", "input" (optional context), and "output".
+print_main("="*80)
+print_main("DISTRIBUTED TRAINING WITH ACCELERATE")
+print_main("="*80)
+print_main(f"Number of processes: {accelerator.num_processes}")
+print_main(f"Process index: {accelerator.process_index}")
+print_main(f"Device: {accelerator.device}")
+print_main("="*80)
 
-Create one example for each of these categories:
-1. **Concept Definition:** Direct question about a rule or definition (e.g., "What is the Travel Rule?").
-2. **Scenario Analysis:** Create a short hypothetical scenario based on the text and ask for a verdict (e.g., "A customer did X. Is this suspicious?").
-3. **Fact Extraction:** Ask to extract specific red flags or penalties mentioned in the text.
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 
-**Input Text:**
-{text_chunk}
+class Config:
+    # Model
+    model_name = "mistralai/Mistral-7B-Instruct-v0.3"
+    max_seq_length = 1024  # Adjust based on your data
+    
+    # Data
+    dataset_path = "./compliance_dataset"
+    
+    # Training
+    per_device_train_batch_size = 2  # Per GPU
+    per_device_eval_batch_size = 2
+    gradient_accumulation_steps = 4  # Effective batch = 8 per GPU
+    num_train_epochs = 3
+    learning_rate = 2e-4
+    warmup_steps = 100
+    max_grad_norm = 1.0
+    
+    # LoRA
+    lora_r = 16
+    lora_alpha = 16
+    lora_dropout = 0.05
+    lora_target_modules = [
+        "q_proj",
+        "k_proj", 
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    ]
+    
+    # Output
+    output_dir = "./mistral-compliance-accelerate"
+    
+    # Optimization
+    use_4bit = True  # Use 4-bit quantization
+    use_gradient_checkpointing = True
+    
+    # Other
+    seed = 42
+    logging_steps = 10
+    save_steps = 500
+    eval_steps = 500
 
-**JSON Output Format:**
-{{
-  "pairs": [
-    {{
-      "instruction": "...",
-      "input": "...",
-      "output": "..."
-    }}
-  ]
-}}
-"""
+config = Config()
 
+# ============================================================================
+# QUANTIZATION CONFIG (4-bit)
+# ============================================================================
 
-def load_documents(directory: str) -> List[str]:
-    """Reads all .txt files from the directory."""
-    texts = []
-    files = glob.glob(os.path.join(directory, "*.txt"))
-    print(f"Found {len(files)} documents.")
-
-    for filepath in files:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            texts.append(f.read())
-    return texts
-
-
-def chunk_text(text: str, chunk_size=2000) -> List[str]:
-    """
-    Splits text into manageable chunks for the API.
-    Overlapping ensures context isn't lost at the edges.
-    """
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=200,
-        separators=["\n\n", "\n", ". ", " ", ""]
+if config.use_4bit:
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
     )
-    return splitter.split_text(text)
+    print_main("Using 4-bit quantization")
+else:
+    bnb_config = None
+    print_main("Using bfloat16 (no quantization)")
 
+# ============================================================================
+# LOAD TOKENIZER
+# ============================================================================
 
-def generate_instruction_pairs(text_chunk: str) -> List[Dict]:
-    """Sends the chunk to the Teacher LLM to generate training pairs."""
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",  # Or "gpt-3.5-turbo" for lower cost
-            response_format={"type": "json_object"},  # Enforces JSON structure
-            messages=[
-                {"role": "system", "content": "You are a data generation assistant for AML/KYC compliance."},
-                {"role": "user", "content": GENERATION_PROMPT.format(text_chunk=text_chunk)}
-            ],
-            temperature=0.7  # Slight creativity for scenarios
-        )
+print_main("\nLoading tokenizer...")
 
-        # Parse the JSON response
-        content = response.choices[0].message.content
-        data = json.loads(content)
-        return data.get("pairs", [])
+tokenizer = AutoTokenizer.from_pretrained(
+    config.model_name,
+    trust_remote_code=True,
+)
 
-    except Exception as e:
-        print(f"Error generating pairs: {e}")
-        return []
+# Set padding token
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
 
+tokenizer.padding_side = "right"
 
-def main():
-    # 1. Load raw text
-    raw_texts = load_documents(SOURCE_DOCS_DIR)
+print_main(f"✓ Tokenizer loaded")
+print_main(f"  Vocab size: {len(tokenizer)}")
+print_main(f"  Pad token: {tokenizer.pad_token}")
 
-    all_pairs = []
+# ============================================================================
+# LOAD MODEL
+# ============================================================================
 
-    # 2. Process each document
-    for i, doc_text in enumerate(raw_texts):
-        print(f"Processing document {i + 1}...")
+print_main("\nLoading model...")
 
-        # 3. Chunk the document
-        chunks = chunk_text(doc_text)
-        print(f"  - Split into {len(chunks)} chunks.")
+model = AutoModelForCausalLM.from_pretrained(
+    config.model_name,
+    quantization_config=bnb_config if config.use_4bit else None,
+    torch_dtype=torch.bfloat16 if not config.use_4bit else None,
+    trust_remote_code=True,
+    device_map={"": accelerator.process_index},  # Important for multi-GPU
+)
 
-        # 4. Generate pairs for each chunk
-        for j, chunk in enumerate(chunks):
-            # Skip very small chunks (likely footer junk)
-            if len(chunk) < 300:
-                continue
+print_main(f"✓ Model loaded")
+print_main(f"  Model dtype: {model.dtype}")
+print_main(f"  Device: {model.device}")
 
-            print(f"  - Generating data from chunk {j + 1}...")
-            pairs = generate_instruction_pairs(chunk)
+# ============================================================================
+# PREPARE MODEL FOR TRAINING
+# ============================================================================
 
-            # Add source metadata (optional, helps debugging)
-            for pair in pairs:
-                pair['source_doc_id'] = i
+# Enable gradient checkpointing
+if config.use_gradient_checkpointing:
+    model.gradient_checkpointing_enable()
+    print_main("✓ Gradient checkpointing enabled")
 
-            all_pairs.extend(pairs)
+# Prepare for k-bit training (if using quantization)
+if config.use_4bit:
+    model = prepare_model_for_kbit_training(
+        model,
+        use_gradient_checkpointing=config.use_gradient_checkpointing,
+    )
+    print_main("✓ Model prepared for 4-bit training")
 
-    # 5. Save to JSONL (Standard format for fine-tuning)
-    print(f"Saving {len(all_pairs)} training examples to {OUTPUT_FILE}...")
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        for entry in all_pairs:
-            f.write(json.dumps(entry) + "\n")
+# ============================================================================
+# APPLY LORA
+# ============================================================================
 
+print_main("\nApplying LoRA...")
 
-if __name__ == "__main__":
-    main()
+lora_config = LoraConfig(
+    r=config.lora_r,
+    lora_alpha=config.lora_alpha,
+    target_modules=config.lora_target_modules,
+    lora_dropout=config.lora_dropout,
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+model = get_peft_model(model, lora_config)
+
+print_main("✓ LoRA applied")
+
+# Print trainable parameters
+if accelerator.is_main_process:
+    model.print_trainable_parameters()
+
+# ============================================================================
+# LOAD DATASET
+# ============================================================================
+
+print_main("\nLoading dataset...")
+
+dataset = load_from_disk(config.dataset_path)
+
+print_main(f"✓ Dataset loaded")
+print_main(f"  Train: {len(dataset['train'])} examples")
+print_main(f"  Validation: {len(dataset['validation'])} examples")
+
+# Filter sequences that are too long
+def filter_length(example):
+    """Filter out sequences longer than max_seq_length"""
+    tokens = tokenizer(example['text'], truncation=False)['input_ids']
+    return len(tokens) <= config.max_seq_length
+
+if accelerator.is_main_process:
+    print_main("\nFiltering long sequences...")
+    original_train = len(dataset['train'])
+    original_val = len(dataset['validation'])
+    
+    dataset['train'] = dataset['train'].filter(filter_length)
+    dataset['validation'] = dataset['validation'].filter(filter_length)
+    
+    print_main(f"  Train: {original_train} → {len(dataset['train'])}")
+    print_main(f"  Val: {original_val} → {len(dataset['validation'])}")
+
+# Wait for main process to finish filtering
+accelerator.wait_for_everyone()
+
+# ============================================================================
+# TRAINING ARGUMENTS
+# ============================================================================
+
+training_args = TrainingArguments(
+    output_dir=config.output_dir,
+    
+    # Batch sizes
+    per_device_train_batch_size=config.per_device_train_batch_size,
+    per_device_eval_batch_size=config.per_device_eval_batch_size,
+    gradient_accumulation_steps=config.gradient_accumulation_steps,
+    
+    # Training schedule
+    num_train_epochs=config.num_train_epochs,
+    max_steps=-1,
+    
+    # Learning rate
+    learning_rate=config.learning_rate,
+    lr_scheduler_type="cosine",
+    warmup_steps=config.warmup_steps,
+    
+    # Optimization
+    optim="paged_adamw_8bit",  # Memory-efficient optimizer
+    weight_decay=0.01,
+    max_grad_norm=config.max_grad_norm,
+    
+    # Precision
+    bf16=True,
+    fp16=False,
+    
+    # Logging
+    logging_steps=config.logging_steps,
+    logging_first_step=True,
+    
+    # Evaluation
+    evaluation_strategy="steps",
+    eval_steps=config.eval_steps,
+    
+    # Saving
+    save_strategy="steps",
+    save_steps=config.save_steps,
+    save_total_limit=2,
+    load_best_model_at_end=True,
+    metric_for_best_model="eval_loss",
+    
+    # Other
+    seed=config.seed,
+    data_seed=config.seed,
+    
+    # Reporting
+    report_to="tensorboard",
+    
+    # DataLoader
+    dataloader_num_workers=4,
+    dataloader_pin_memory=True,
+    
+    # Disable DDP-specific settings (Accelerate handles it)
+    ddp_find_unused_parameters=False,
+    
+    # Gradient checkpointing
+    gradient_checkpointing=config.use_gradient_checkpointing,
+)
+
+# ============================================================================
+# TRAINER
+# ============================================================================
+
+print_main("\nInitializing trainer...")
+
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    args=training_args,
+    train_dataset=dataset['train'],
+    eval_dataset=dataset['validation'],
+    dataset_text_field="text",
+    max_seq_length=config.max_seq_length,
+    packing=False,  # Don't pack sequences (simpler, more stable)
+)
+
+print_main("✓ Trainer initialized")
+
+# ============================================================================
+# TRAIN
+# ============================================================================
+
+print_main("\n" + "="*80)
+print_main("STARTING TRAINING")
+print_main("="*80)
+
+if accelerator.is_main_process:
+    effective_batch_size = (
+        config.per_device_train_batch_size 
+        * config.gradient_accumulation_steps 
+        * accelerator.num_processes
+    )
+    print_main(f"Per-device batch size: {config.per_device_train_batch_size}")
+    print_main(f"Gradient accumulation steps: {config.gradient_accumulation_steps}")
+    print_main(f"Number of GPUs: {accelerator.num_processes}")
+    print_main(f"Effective batch size: {effective_batch_size}")
+    print_main(f"Total optimization steps: ~{len(dataset['train']) * config.num_train_epochs // effective_batch_size}")
+
+print_main("="*80 + "\n")
+
+# Train
+trainer.train()
+
+print_main("\n✓ Training complete!")
+
+# ============================================================================
+# SAVE FINAL MODEL
+# ============================================================================
+
+if accelerator.is_main_process:
+    print_main("\nSaving final model...")
+    
+    final_output_dir = f"{config.output_dir}/final"
+    
+    # Save model
+    trainer.model.save_pretrained(final_output_dir)
+    
+    # Save tokenizer
+    tokenizer.save_pretrained(final_output_dir)
+    
+    print_main(f"✓ Model saved to {final_output_dir}")
+
+print_main("\n" + "="*80)
+print_main("DONE!")
+print_main("="*80)
