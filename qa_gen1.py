@@ -44,7 +44,7 @@ class Config:
     max_seq_length = 1024  # Adjust based on your data
     
     # Data
-    dataset_path = "./compliance_dataset"
+    dataset_path = "./dataset"
     
     # Training
     per_device_train_batch_size = 2  # Per GPU
@@ -70,7 +70,7 @@ class Config:
     ]
     
     # Output
-    output_dir = "./mistral-compliance-accelerate"
+    output_dir = "./mistral-accelerate"
     
     # Optimization
     use_4bit = True  # Use 4-bit quantization
@@ -341,3 +341,4 @@ if accelerator.is_main_process:
 print_main("\n" + "="*80)
 print_main("DONE!")
 print_main("="*80)
+
