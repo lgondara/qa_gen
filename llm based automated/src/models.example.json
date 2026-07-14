@@ -1,0 +1,40 @@
+{
+  "_comment": [
+    "Model configuration for FinSim. Pass with --model-config models.json.",
+    "Each entry is one endpoint; 'count' weights agent assignment across",
+    "entries (OASIS round-robins); 'role' (advisory mode) pins a spec to",
+    "advisors or clients. Delete the entries you don't use — every entry",
+    "listed is constructed at startup. API keys come from environment",
+    "variables (defaults per platform; override with api_key_env)."
+  ],
+
+  "models": [
+    { "platform": "deepseek", "model": "deepseek-chat", "count": 1 },
+
+    { "platform": "vllm", "model": "Qwen/Qwen2.5-7B-Instruct",
+      "url": "http://localhost:8000/v1", "count": 2 },
+    { "platform": "vllm", "model": "Qwen/Qwen2.5-7B-Instruct",
+      "url": "http://localhost:8001/v1", "count": 2 },
+
+    { "platform": "ollama", "model": "llama3.1:8b",
+      "url": "http://localhost:11434/v1" },
+
+    { "platform": "bedrock", "model": "anthropic.claude-3-5-haiku-20241022-v1:0",
+      "_note": "Bedrock OpenAI-compatible gateway: set BEDROCK_API_BASE_URL and BEDROCK_API_KEY" },
+
+    { "platform": "bedrock-converse", "model": "amazon.nova-lite-v1:0",
+      "_note": "Native Converse API via standard AWS credentials/region" },
+
+    { "platform": "openai-compatible", "model": "llama-3.3-70b-versatile",
+      "url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY",
+      "_note": "catch-all for any OpenAI-style API: Groq, Together, OpenRouter, Azure, LM Studio, ..." }
+  ],
+
+  "_advisory_role_example": {
+    "models": [
+      { "platform": "deepseek", "model": "deepseek-chat", "role": "advisor" },
+      { "platform": "vllm", "model": "Qwen/Qwen2.5-3B-Instruct",
+        "url": "http://localhost:8000/v1", "role": "client", "count": 4 }
+    ]
+  }
+}
